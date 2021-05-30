@@ -4,6 +4,9 @@
 # constitucionesNic
 
 <!-- badges: start -->
+
+[![Travis build
+status](https://travis-ci.com/RRMaximiliano/constitucionesNic.svg?branch=master)](https://travis-ci.com/RRMaximiliano/constitucionesNic)
 <!-- badges: end -->
 
 El objetivo de `constitucionesNic` es tener las constituciones políticas

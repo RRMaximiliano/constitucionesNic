@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 # constitucionesNic
 
 <!-- badges: start -->
+[![Travis build status](https://travis-ci.com/RRMaximiliano/constitucionesNic.svg?branch=master)](https://travis-ci.com/RRMaximiliano/constitucionesNic)
 <!-- badges: end -->
 
 El objetivo de `constitucionesNic` es tener las constituciones políticas de Nicaragua como bases de datos. Esto permite que la constitución se pueda utilizar para análisis de texto.
