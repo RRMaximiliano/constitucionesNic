@@ -48,8 +48,15 @@ Por ejempo, el paquete contiene las constituciones políticas de los años 1974,
 library(tidyverse)
 library(constitucionesNic)
 
-cons_1974
+cons_2014
 ```
+
+```{r}
+# Cantidad de lineas por Temas
+cons_2014 %>% 
+  count(tema, sort = TRUE)
+```
+
 
 # Comentarios y sugerencias
 

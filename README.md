@@ -48,21 +48,42 @@ library(tidyverse)
 #> x dplyr::lag()    masks stats::lag()
 library(constitucionesNic)
 
-cons_1974
-#> # A tibble: 867 x 7
-#>    year   line text                                titulo  cap     art   tema   
-#>    <chr> <int> <chr>                               <chr>   <chr>   <chr> <chr>  
-#>  1 1974      1 CONSTITUCIÓN POLÍTICA               PREÁMB~ <NA>    <NA>  PREÁMB~
-#>  2 1974      2 Aprobado el 14 de Marzo de 1974     PREÁMB~ <NA>    <NA>  PREÁMB~
-#>  3 1974      3 Publicado en La Gaceta, Diario Ofi~ PREÁMB~ <NA>    <NA>  PREÁMB~
-#>  4 1974      4 Bajo la Protección de Dios, Nosotr~ PREÁMB~ <NA>    <NA>  PREÁMB~
-#>  5 1974      5 CONSTITUCIÓN POLÍTICA               PREÁMB~ <NA>    <NA>  PREÁMB~
-#>  6 1974      6 TÍTULO I                            TÍTULO~ <NA>    <NA>  CAPÍTU~
-#>  7 1974      7 CAPÍTULO I                          TÍTULO~ CAPÍTU~ <NA>  CAPÍTU~
-#>  8 1974      8 Nación y Estado                     TÍTULO~ CAPÍTU~ <NA>  CAPÍTU~
-#>  9 1974      9 Arto. 1.- Nicaragua es una Nación ~ TÍTULO~ CAPÍTU~ 1     CAPÍTU~
-#> 10 1974     10 Arto. 2.- El poder político reside~ TÍTULO~ CAPÍTU~ 2     CAPÍTU~
-#> # ... with 857 more rows
+cons_2014
+#> # A tibble: 715 x 7
+#>    year   line text                                  titulo   cap   art   tema  
+#>    <chr> <int> <chr>                                 <chr>    <chr> <chr> <chr> 
+#>  1 2014      1 TEXTO DE LA CONSTITUCIÓN POLÍTICA DE~ PREÁMBU~ <NA>  <NA>  PREÁM~
+#>  2 2014      2 CONSTITUCIÓN POLÍTICA DE NICARAGUA, ~ PREÁMBU~ <NA>  <NA>  PREÁM~
+#>  3 2014      3 Publicada en La Gaceta, Diario Ofici~ PREÁMBU~ <NA>  <NA>  PREÁM~
+#>  4 2014      4 “El Presidente de la República        PREÁMBU~ <NA>  <NA>  PREÁM~
+#>  5 2014      5 Hace saber al pueblo de Nicaragua qu~ PREÁMBU~ <NA>  <NA>  PREÁM~
+#>  6 2014      6 CONSTITUCIÓN POLÍTICA:                PREÁMBU~ <NA>  <NA>  PREÁM~
+#>  7 2014      7 Preámbulo                             PREÁMBU~ <NA>  <NA>  PREÁM~
+#>  8 2014      8 NOSOTROS,                             PREÁMBU~ <NA>  <NA>  PREÁM~
+#>  9 2014      9 Representantes del Pueblo de Nicarag~ PREÁMBU~ <NA>  <NA>  PREÁM~
+#> 10 2014     10 Evocando                              PREÁMBU~ <NA>  <NA>  PREÁM~
+#> # ... with 705 more rows
+```
+
+``` r
+# Cantidad de lineas por Temas
+cons_2014 %>% 
+  count(tema, sort = TRUE)
+#> # A tibble: 12 x 2
+#>    tema                                                                        n
+#>    <chr>                                                                   <int>
+#>  1 DE LA ORGANIZACIÓN DEL ESTADO                                             286
+#>  2 DERECHOS, DEBERES Y GARANTÍAS DEL PUEBLO NICARAGÜENSE                     164
+#>  3 ECONOMÍA NACIONAL, REFORMA AGRARIA Y FINANZAS PÚBLICAS                     46
+#>  4 DIVISIÓN POLÍTICO ADMINISTRATIVA                                           40
+#>  5 SUPREMACÍA DE LA CONSTITUCIÓN, SU REFORMA Y DE LAS LEYES CONSTITUCIONA~    32
+#>  6 PREÁMBULO                                                                  28
+#>  7 DEFENSA Y SEGURIDAD NACIONAL.                                              26
+#>  8 EDUCACIÓN Y CULTURA                                                        22
+#>  9 DISPOSICIONES FINALES                                                      20
+#> 10 SOBRE EL ESTADO                                                            18
+#> 11 PRINCIPIOS FUNDAMENTALES                                                   17
+#> 12 LA NACIONALIDAD NICARAGÜENSE                                               16
 ```
 
 # Comentarios y sugerencias
