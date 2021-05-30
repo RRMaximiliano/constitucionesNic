@@ -1,0 +1,56 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# constitucionesNic
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+El objetivo de `constitucionesNic` es tener las constituciones políticas de Nicaragua como bases de datos. Esto permite que la constitución se pueda utilizar para análisis de texto.
+
+## Instalación
+
+### Instalar directamente desde GitHub
+
+Puede instalar `constitucionesNic` desde GitHub con:
+
+``` {r, eval = FALSE}
+remotes::install_github("RRMaximiliano/constitucionesNic")
+```
+
+## Datos
+
+Por ejempo, el paquete contiene las constituciones políticas de los años 1974, 1987, 2010, y 2014. Cada una de estas bases tienen las siguientes variables:
+
+1. `year`: Año de publicación.
+2. `line`: Línea en el texto extraído de la Asamblea Nacional.
+3. `text`: Texto de la constitución de acuerdo a la línea.
+4. `titulo`: Título de la constitución.
+5. `cap`: Capítulo de la constitución (por Título).
+6. `art`: Artículo de la constitución.
+7. `tema`: Tema de la constitución (por Título). 
+
+## Cargando los datos
+
+```{r example}
+library(tidyverse)
+library(constitucionesNic)
+
+cons_1974
+```
+
+# Comentarios y sugerencias
+
+Para realizar comentarios o sugerencias sobre la base de datos puedes abrir un issue en este repositorio: https://github.com/RRMaximiliano/constitucionesNic/issues
