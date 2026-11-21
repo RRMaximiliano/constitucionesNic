@@ -26,7 +26,8 @@ let porId = new Map();
 
 // Persistent UI options (kept across re-renders and routes).
 const opciones = {
-  modo: 'unificado', // 'unificado' | 'dividido' | 'articulos'
+  // 'unificado' | 'dividido' | 'articulos'. Wide screens start side by side.
+  modo: matchMedia('(min-width: 1012px)').matches ? 'dividido' : 'unificado',
   incluirAlternas: true,
   mostrarSinCambios: false,
   mostrarSoloForma: true,
@@ -263,6 +264,7 @@ let repintarActual = null;
 estrecho.addEventListener('change', () => { if (repintarActual) repintarActual(); });
 const opsCache = new Map();
 let focoPendiente = null;
+let vigia = null;
 
 const etiqueta = (id) => (id === VACIO ? '∅' : id);
 const MODOS = [
@@ -278,9 +280,10 @@ function celda(clase, ...hijos) {
 // Text cell content: the changed words as <del>/<ins> when the line is
 // paired with its edited version, otherwise the plain line.
 function contenidoTxt(item, tipo) {
+  const signo = el('span', { class: 'signo', 'aria-hidden': 'true', text: tipo === 'eliminado' ? '-' : '+' });
   const prefijo = el('span', { class: 'solo-lectores', text: tipo === 'eliminado' ? 'Eliminado: ' : 'Añadido: ' });
-  if (!item.tokens) return [prefijo, item.linea.text];
-  return [prefijo, ...item.tokens.map((t) =>
+  if (!item.tokens) return [signo, prefijo, item.linea.text];
+  return [signo, prefijo, ...item.tokens.map((t) =>
     t.tipo === 'igual' ? document.createTextNode(t.texto)
       : el(tipo === 'eliminado' ? 'del' : 'ins', { text: t.texto }))];
 }
@@ -292,8 +295,7 @@ function filaIgual(o, dividido) {
       celda('num', String(o.b.line)), celda('txt', o.b.text));
   }
   return el('tr', { class: 'igual' },
-    celda('num', String(o.a.line)), celda('num', String(o.b.line)),
-    el('td', { class: 'signo', 'aria-hidden': 'true', text: ' ' }), celda('txt', o.b.text));
+    celda('num', String(o.a.line)), celda('num', String(o.b.line)), celda('txt', o.b.text));
 }
 
 function filasCambio(op, dividido) {
@@ -308,7 +310,6 @@ function filasCambio(op, dividido) {
     const elim = f.tipo === 'eliminado';
     return el('tr', { class: elim ? 'elim' : 'agr' },
       celda('num', elim ? String(f.linea.line) : ''), celda('num', elim ? '' : String(f.linea.line)),
-      el('td', { class: 'signo', 'aria-hidden': 'true', text: elim ? '−' : '+' }),
       celda('txt', ...contenidoTxt(f, f.tipo)));
   });
 }
@@ -317,11 +318,13 @@ function tablaDiff(ctx, dividido) {
   const { base, head, hunks } = ctx;
   const cols = dividido
     ? [el('col', { class: 'c-num' }), el('col'), el('col', { class: 'c-num' }), el('col')]
-    : [el('col', { class: 'c-num' }), el('col', { class: 'c-num' }), el('col', { class: 'c-signo' }), el('col')];
+    : [el('col', { class: 'c-num' }), el('col', { class: 'c-num' }), el('col')];
+  const ancho = cols.length;
   const filas = [];
+  let nHunk = 0;
   for (const item of hunks) {
     if (item.tipo === 'hunk') {
-      filas.push(el('tr', { class: 'hunk' }, el('td', { colspan: 4 },
+      filas.push(el('tr', { class: 'hunk' }, el('td', { colspan: ancho, id: `hunk-${nHunk++}` },
         el('span', { class: 'hunk-rango', text: formatoHunk(item) }), ' ',
         el('span', { class: 'hunk-ctx', text: item.contexto }))));
       for (const o of item.ops) {
@@ -340,7 +343,7 @@ function tablaDiff(ctx, dividido) {
           revelar[0].focus();
         },
       });
-      const fila = el('tr', { class: 'pliegue' }, el('td', { colspan: 4 }, boton));
+      const fila = el('tr', { class: 'pliegue' }, el('td', { colspan: ancho }, boton));
       filas.push(fila);
     }
   }
@@ -350,23 +353,24 @@ function tablaDiff(ctx, dividido) {
     el('tbody', {}, filas));
 }
 
-function pintarDiff(contenedor, ctx, dividido) {
-  const { base, head, stats } = ctx;
-  if (!stats.agregadas && !stats.eliminadas) {
-    contenedor.replaceChildren(el('p', { class: 'vacio', text: 'Los dos textos son idénticos.' }));
-    return;
-  }
-  contenedor.replaceChildren(el('section', { class: 'archivo' },
-    el('div', { class: 'archivo-cab' },
-      el('span', { class: 'archivo-ruta', text: `a/${etiqueta(base)} → b/${head}` }),
-      el('span', { class: 'archivo-stat' },
-        el('span', { class: 'mas', text: `+${numero(stats.agregadas)}` }),
-        el('span', { class: 'menos', text: `−${numero(stats.eliminadas)}` }),
-        barraCambios(stats))),
-    tablaDiff(ctx, dividido)));
+function cabArchivo({ base, head, url }, suelta) {
+  return el('div', { class: `archivo-cab${suelta ? ' suelta' : ''}` },
+    el('span', { class: 'archivo-ruta', text: `a/${etiqueta(base)} → b/${head}` }),
+    el('span', { class: 'archivo-enlaces' },
+      base !== VACIO && el('a', { href: `#/v/${encodeURIComponent(base)}`, text: `Leer ${base}` }),
+      el('a', { href: `#/v/${encodeURIComponent(head)}`, text: `Leer ${head}` }),
+      url && enlaceExterno(url, 'Portal de la Asamblea')));
 }
 
-async function pintarPorArticulo(contenedor, archivo, mio) {
+function pintarDiff(contenedor, ctx, dividido) {
+  const { stats } = ctx;
+  contenedor.replaceChildren(el('section', { class: 'archivo' },
+    cabArchivo(ctx),
+    stats.agregadas || stats.eliminadas ? tablaDiff(ctx, dividido)
+      : el('p', { class: 'vacio', text: 'Los dos textos son idénticos.' })));
+}
+
+async function pintarPorArticulo(contenedor, archivo, mio, cab) {
   contenedor.replaceChildren(esqueleto('Cargando cambios…'));
   const datos = await cargarJson(`data/${archivo}`);
   if (mio !== token) return;
@@ -389,6 +393,7 @@ async function pintarPorArticulo(contenedor, archivo, mio) {
     return el('label', { for: idc }, i, texto);
   };
   contenedor.replaceChildren(
+    cab,
     el('div', { class: 'controles', role: 'group', 'aria-label': 'Filtros' },
       ...chips,
       casilla('sin-cambios', 'Mostrar artículos sin cambios', 'mostrarSinCambios'),
@@ -415,57 +420,124 @@ function barraCambios(stats) {
   return el('span', { class: 'barra', 'aria-hidden': 'true' }, cuadros);
 }
 
-function construirLog(base, head) {
-  const lista = ordenarTimeline(timeline, { incluirAlternas: opciones.incluirAlternas });
-  const pendientes = lista.filter((e) => e.clase === 'ley');
-  const versiones = lista.filter((e) => e.clase === 'version');
+// ---------- toolbar menus ----------
+// A button that opens a panel of links or buttons. One menu is open at a
+// time. Escape, a click outside or focus leaving the menu closes it.
+let menuAbierto = null;
+let menuSeq = 0;
+
+function cerrarMenu(devolverFoco) {
+  if (menuAbierto) menuAbierto.cerrar(devolverFoco);
+}
+
+document.addEventListener('keydown', (ev) => {
+  if (!menuAbierto) return;
+  if (ev.key === 'Escape') {
+    ev.preventDefault();
+    cerrarMenu(true);
+    return;
+  }
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(ev.key)) return;
+  if (!menuAbierto.raiz.contains(document.activeElement)) return;
+  const items = [...menuAbierto.panel.querySelectorAll('a[href], button, input')];
+  if (!items.length) return;
+  ev.preventDefault();
+  const i = items.indexOf(document.activeElement);
+  const n = ev.key === 'Home' ? 0
+    : ev.key === 'End' ? items.length - 1
+      : ev.key === 'ArrowDown' ? Math.min(i + 1, items.length - 1)
+        : Math.max(i - 1, 0);
+  items[n].focus();
+});
+
+document.addEventListener('click', (ev) => {
+  if (!menuAbierto || menuAbierto.raiz.contains(ev.target)) return;
+  // Hand focus back to the button unless the click landed on another control.
+  cerrarMenu(!ev.target.closest?.('a, button, input, select, summary'));
+});
+
+function crearMenu({ etiqueta: texto, titulo, llenar }) {
+  const id = `menu-${++menuSeq}`;
+  const panel = el('div', { class: 'menu-panel', id, role: 'dialog', 'aria-label': titulo, hidden: true });
+  const boton = el('button', {
+    type: 'button', class: 'menu-boton', 'aria-expanded': 'false', 'aria-haspopup': 'dialog', 'aria-controls': id, text: texto,
+    onclick: () => { if (panel.hidden) abrir(); else cerrar(true); },
+  });
+  const raiz = el('div', { class: 'menu' }, boton, panel);
+  function abrir() {
+    cerrarMenu(false);
+    panel.replaceChildren(el('p', { class: 'menu-titulo', text: titulo }), ...llenar());
+    panel.hidden = false;
+    boton.setAttribute('aria-expanded', 'true');
+    menuAbierto = { raiz, panel, cerrar };
+  }
+  function cerrar(devolverFoco) {
+    panel.hidden = true;
+    panel.replaceChildren();
+    boton.setAttribute('aria-expanded', 'false');
+    if (menuAbierto && menuAbierto.raiz === raiz) menuAbierto = null;
+    if (devolverFoco) boton.focus();
+  }
+  raiz.addEventListener('focusout', (ev) => {
+    if (!panel.hidden && ev.relatedTarget && !raiz.contains(ev.relatedTarget)) cerrar(false);
+  });
+  return { raiz, boton };
+}
+
+// The commit log: pending laws first, then every text, newest first.
+function panelHistorial(base, head) {
+  const listas = el('div', {});
+  const pintar = () => {
+    const lista = ordenarTimeline(timeline, { incluirAlternas: opciones.incluirAlternas });
+    const pendientes = lista.filter((e) => e.clase === 'ley');
+    const versiones = lista.filter((e) => e.clase === 'version');
+    const nodos = [];
+    if (pendientes.length) {
+      nodos.push(
+        el('h3', { class: 'log-titulo', text: 'Cambios sin commit' }),
+        el('ol', { class: 'log-lista' }, pendientes.map((l) => el('li', { class: 'log-pendiente' },
+          l.url ? enlaceExterno(l.url, l.nombre) : el('span', { text: l.nombre }),
+          el('time', { datetime: l.fecha_publicacion, text: fechaLarga(l.fecha_publicacion) })))));
+    }
+    nodos.push(
+      el('h3', { class: 'log-titulo', text: `Commits (${versiones.length})` }),
+      el('ol', { class: 'log-lista' }, versiones.map((v) => {
+        const padre = padreParaComparar(v, timeline.versiones);
+        const actual = v.id === head && base === padre;
+        return el('li', {}, el('a', {
+          class: 'log-commit',
+          href: rutaComparar(padre, v.id),
+          'aria-current': actual ? 'page' : null,
+          onclick: () => cerrarMenu(true),
+        },
+        el('span', { class: 'hash', text: v.commit }),
+        el('span', { class: 'log-id', text: v.id }),
+        el('span', { class: 'log-nombre', text: v.nombre }),
+        el('span', { class: 'log-resumen' },
+          v.padre ? resumenNodo(v)
+            : padre === VACIO ? 'Primera constitución · texto completo' : `Comparado con ${padre}`),
+        v.linea === 'alterna' && el('span', { class: 'insignia no-vigente', text: 'No vigente' })));
+      })));
+    listas.replaceChildren(...nodos);
+  };
   const check = el('input', {
     type: 'checkbox', id: 'alternas',
-    onchange: (ev) => {
-      opciones.incluirAlternas = ev.target.checked;
-      const abierto = log.open;
-      const nuevo = construirLog(base, head);
-      nuevo.open = abierto;
-      log.replaceWith(nuevo);
-      document.getElementById('alternas').focus();
-    },
+    onchange: (ev) => { opciones.incluirAlternas = ev.target.checked; pintar(); },
   });
   check.checked = opciones.incluirAlternas;
-  const nodos = [
-    el('summary', {}, 'Historial',
-      el('span', { class: 'contador', text: String(versiones.length) }),
-      el('span', { class: 'solo-lectores', text: ' commits' })),
-    el('label', { for: 'alternas' }, check, 'Mostrar proyectos y textos no vigentes'),
-  ];
-  if (pendientes.length) {
-    nodos.push(
-      el('h3', { class: 'log-titulo', text: 'Cambios sin commit' }),
-      el('ol', { class: 'log-lista log-grafo pendientes' }, pendientes.map((l) => el('li', { class: 'log-pendiente' },
-        l.url ? enlaceExterno(l.url, l.nombre) : el('span', { text: l.nombre }),
-        el('time', { datetime: l.fecha_publicacion, text: fechaLarga(l.fecha_publicacion) })))));
-  }
-  nodos.push(
-    el('h3', { class: 'log-titulo', text: 'Commits' }),
-    el('ol', { class: 'log-lista log-grafo' }, versiones.map((v) => {
-      const padre = padreParaComparar(v, timeline.versiones);
-      const actual = v.id === head && base === padre;
-      const clases = [v.linea === 'alterna' && 'alterna', actual && 'actual'].filter(Boolean).join(' ');
-      return el('li', { class: clases || null }, el('a', {
-        class: `log-commit${v.linea === 'alterna' ? ' alterna' : ''}`,
-        href: rutaComparar(padre, v.id),
-        'aria-current': actual ? 'page' : null,
-      },
-      el('span', { class: 'hash', text: v.commit }),
-      el('span', { class: 'log-id', text: v.id }),
-      el('span', { class: 'log-nombre', text: v.nombre }),
-      el('span', { class: 'log-resumen' },
-        v.padre ? resumenNodo(v)
-          : padre === VACIO ? 'Primera constitución · texto completo' : `Comparado con ${padre}`),
-      v.linea === 'alterna' && el('span', { class: 'insignia no-vigente', text: 'No vigente' })));
-    })));
-  const log = el('details', { class: 'log' }, nodos);
-  log.open = matchMedia('(min-width: 1100px)').matches;
-  return log;
+  pintar();
+  return [el('label', { class: 'menu-opcion', for: 'alternas' }, check, 'Mostrar proyectos y textos no vigentes'), listas];
+}
+
+// Jump list: one entry per hunk of the diff on screen.
+function panelIrA(hunks) {
+  return [el('ol', { class: 'log-lista' }, hunks.filter((h) => h.tipo === 'hunk').map((h, i) => el('li', {},
+    el('button', {
+      type: 'button', class: 'menu-item',
+      onclick: () => { cerrarMenu(false); irA(`hunk-${i}`); },
+    },
+    el('span', { class: 'menu-item-texto', text: h.contexto || 'Inicio del texto' }),
+    el('span', { class: 'hash', text: formatoHunk(h) })))))];
 }
 
 function selectorVersion(idSel, valor, conVacio) {
@@ -504,7 +576,7 @@ async function vistaComparar({ base, head }, mio) {
   }
   const ops = opsCache.get(clave);
   const stats = estadisticas(ops);
-  const ctx = { base, head, ops, stats, hunks: agruparHunks(ops, 1) };
+  const ctx = { base, head, ops, stats, url: headV.url, hunks: agruparHunks(ops, 1) };
   const archivo = archivoArticulos(base, headV);
 
   const incorporadas = base === headV.padre
@@ -512,6 +584,7 @@ async function vistaComparar({ base, head }, mio) {
     : [];
 
   const resultado = el('div', { class: 'resultado' });
+  const menuIrA = crearMenu({ etiqueta: 'Ir a…', titulo: 'Ir a un cambio', llenar: () => panelIrA(ctx.hunks) });
   const botones = [];
   const modoEfectivo = () => {
     if (opciones.modo === 'articulos' && archivo) return 'articulos';
@@ -524,8 +597,9 @@ async function vistaComparar({ base, head }, mio) {
       b.setAttribute('aria-pressed', String(m.id === modo));
       if (m.id === 'dividido') b.hidden = estrecho.matches;
     }
+    menuIrA.boton.disabled = modo === 'articulos' || !(stats.agregadas || stats.eliminadas);
     if (modo === 'articulos') {
-      pintarPorArticulo(resultado, archivo, mio).catch((e) => {
+      pintarPorArticulo(resultado, archivo, mio, cabArchivo(ctx, true)).catch((e) => {
         if (mio !== token) return;
         console.error(e);
         resultado.replaceChildren(el('p', { class: 'estado-error', role: 'alert', text: 'No se pudieron cargar los cambios por artículo.' }));
@@ -548,38 +622,39 @@ async function vistaComparar({ base, head }, mio) {
   const selBase = selectorVersion('sel-base', base, true);
   const selHead = selectorVersion('sel-head', head, false);
   const rango = el('div', { class: 'rango', role: 'group', 'aria-label': 'Elegir versiones' },
-    el('label', { for: 'sel-base' }, el('span', { class: 'rango-etiqueta', text: 'base' }), selBase),
+    el('label', { for: 'sel-base' }, el('span', { class: 'rango-etiqueta', text: 'base:' }), selBase),
     el('button', {
       type: 'button', class: 'invertir', 'aria-label': 'Invertir base y comparación', text: '⇄',
       disabled: base === VACIO,
       onclick: () => { location.hash = rutaComparar(head, base); },
     }),
-    el('label', { for: 'sel-head' }, el('span', { class: 'rango-etiqueta', text: 'comparar' }), selHead));
+    el('label', { for: 'sel-head' }, el('span', { class: 'rango-etiqueta', text: 'comparar:' }), selHead));
 
   const cabecera = el('div', { class: 'cabecera-vista' },
     el('div', { class: 'commit-linea' },
       el('span', { class: 'hash', title: 'Identificador del texto', text: headV.commit }),
       el('h2', { text: `${etiqueta(base)} → ${head}` })),
     el('p', { class: 'commit-nota', text: `${headV.nombre}, ${fechaLarga(headV.fecha)}. Comparado con ${baseV ? baseV.nombre : 'un texto vacío'}.` }),
-    baseV && baseV.familia !== headV.familia && el('p', { class: 'aviso', text: 'Son constituciones distintas: una no reforma a la otra, pero el texto se compara igual, línea por línea.' }),
-    incorporadas.length > 0 && el('ul', { class: 'leyes-incorporadas' },
-      incorporadas.map((l) => el('li', {}, 'Incorpora: ', l.url ? enlaceExterno(l.url, l.nombre) : l.nombre))),
-    el('div', { class: 'resumen-conteos' },
-      el('span', { class: 'mas', text: `+${numero(stats.agregadas)} líneas` }),
-      el('span', { class: 'menos', text: `−${numero(stats.eliminadas)} líneas` }),
-      el('span', { class: 'arch-sim', text: `${numero(stats.iguales)} sin cambios` })),
-    archivo && el('p', { class: 'commit-nota' }, 'Por artículo: ', resumenNodo(headV)),
-    el('div', { class: 'commit-acciones' },
-      baseV && el('a', { href: `#/v/${encodeURIComponent(base)}`, text: `Leer el texto de ${base}` }),
-      el('a', { href: `#/v/${encodeURIComponent(head)}`, text: `Leer el texto de ${head}` }),
-      headV.url && enlaceExterno(headV.url, 'Portal de la Asamblea')));
+    incorporadas.length > 0 && el('p', { class: 'commit-nota incorpora' }, 'Incorpora: ',
+      incorporadas.flatMap((l, i) => [i ? ', ' : null, l.url ? enlaceExterno(l.url, l.nombre) : l.nombre])),
+    baseV && baseV.familia !== headV.familia && el('p', { class: 'aviso', text: 'Son constituciones distintas: una no reforma a la otra, pero el texto se compara igual, línea por línea.' }));
 
-  mostrar(el('div', { class: 'comparar' },
-    el('div', { class: 'comparar-principal' },
-      rango, cabecera,
-      el('div', { class: 'modos', role: 'group', 'aria-label': 'Vista' }, botones.map(([, b]) => b)),
-      resultado),
-    construirLog(base, head)));
+  const menuHistorial = crearMenu({ etiqueta: 'Historial', titulo: 'Historial de textos', llenar: () => panelHistorial(base, head) });
+  const centinela = el('div', { class: 'centinela', 'aria-hidden': 'true' });
+  const herramientas = el('div', { class: 'herramientas' },
+    el('div', { class: 'herramientas-izq' },
+      menuHistorial.raiz, menuIrA.raiz,
+      el('span', { class: 'archivo-stat', 'aria-label': `${numero(stats.agregadas)} líneas añadidas, ${numero(stats.eliminadas)} eliminadas` },
+        el('span', { class: 'mas', text: `+${numero(stats.agregadas)}` }),
+        el('span', { class: 'menos', text: `−${numero(stats.eliminadas)}` }),
+        barraCambios(stats))),
+    el('div', { class: 'modos', role: 'group', 'aria-label': 'Vista' }, botones.map(([, b]) => b)));
+
+  mostrar(el('div', { class: 'comparar' }, cabecera, rango, centinela, herramientas, resultado));
+  // The toolbar gets its border and shadow only while it is stuck to the top.
+  vigia = () => herramientas.classList.toggle('pegada', centinela.getBoundingClientRect().top < 0);
+  window.addEventListener('scroll', vigia, { passive: true });
+  vigia();
   repintar();
   anunciar(`${etiqueta(base)} → ${head}: ${numero(stats.agregadas)} líneas añadidas, ${numero(stats.eliminadas)} eliminadas.`);
   if (focoPendiente) {
@@ -597,6 +672,8 @@ async function enrutar() {
   document.body.classList.toggle('inicio', ruta.vista === 'inicio');
   document.body.classList.toggle('ancho', ruta.vista === 'inicio' || ruta.vista === 'comparar');
   repintarActual = null;
+  menuAbierto = null;
+  if (vigia) { window.removeEventListener('scroll', vigia); vigia = null; }
   try {
     if (ruta.vista === 'version') await vistaVersion(ruta.id, mio);
     else if (ruta.vista === 'cambio') {
