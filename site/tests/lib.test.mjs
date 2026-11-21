@@ -78,7 +78,7 @@ test('version files exist for every version', () => {
 });
 
 test('parsearRuta and etiquetaTipo', () => {
-  assert.deepEqual(parsearRuta(''), { vista: 'timeline' });
+  assert.deepEqual(parsearRuta(''), { vista: 'inicio' });
   assert.deepEqual(parsearRuta('#/v/1838'), { vista: 'version', id: '1838' });
   assert.deepEqual(parsearRuta('#/c/2025'), { vista: 'cambio', id: '2025' });
   assert.equal(etiquetaTipo('non_nata'), 'No entró en vigor');
