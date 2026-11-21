@@ -198,3 +198,7 @@ button.expandir { display: block; width: 100%; text-align: left; font: .8rem var
   .diff col.c-num { width: 2.4rem; }
   .diff td { padding: .1rem .3rem; }
 }
+.log-commit .insignia { grid-column: 1 / -1; justify-self: start; }
+@media (max-width: 1099px) {
+  .comparar .log { order: -1; }
+}

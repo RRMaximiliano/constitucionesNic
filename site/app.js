@@ -439,7 +439,9 @@ function construirLog(base, head) {
       el('span', { class: 'hash', text: v.commit }),
       el('span', { class: 'log-id', text: v.id }),
       el('span', { class: 'log-nombre', text: v.nombre }),
-      el('span', { class: 'log-resumen' }, v.padre ? resumenNodo(v) : 'Texto completo'),
+      el('span', { class: 'log-resumen' },
+        v.padre ? resumenNodo(v)
+          : padre === VACIO ? 'Primera constitución · texto completo' : `Comparado con ${padre}`),
       v.linea === 'alterna' && el('span', { class: 'insignia no-vigente', text: 'No vigente' })));
     })));
   const log = el('details', { class: 'log' }, nodos);
