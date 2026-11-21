@@ -8,13 +8,18 @@
 [![R-CMD-check](https://github.com/RRMaximiliano/constitucionesNic/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RRMaximiliano/constitucionesNic/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-El objetivo de `constitucionesNic` es tener las constituciones políticas
-de Nicaragua como bases de datos. Esto permite que la constitución se
-pueda utilizar para análisis de texto.
+`constitucionesNic` reúne los textos constitucionales de Nicaragua, de
+la Constitución de 1826 al texto íntegro de 2025, como bases de datos
+ordenadas: una fila por línea del texto oficial, con su título,
+capítulo, artículo y tema. Sirve para análisis de texto y para comparar
+cómo cambió la Constitución.
+
+**Sitio web:**
+[rrmaximiliano.com/constitucionesNic](https://www.rrmaximiliano.com/constitucionesNic/)
+compara dos textos cualesquiera como un `git diff`: líneas eliminadas en
+rojo, añadidas en verde y las palabras que cambiaron resaltadas.
 
 ## Instalación
-
-### Instalar directamente desde GitHub
 
 Puede instalar `constitucionesNic` desde GitHub con:
 
@@ -22,148 +27,150 @@ Puede instalar `constitucionesNic` desde GitHub con:
 remotes::install_github("RRMaximiliano/constitucionesNic")
 ```
 
+## Catálogo
+
+El paquete incluye 20 textos completos: las 11 constituciones que
+estuvieron vigentes, los 5 textos consolidados de la Constitución de
+1987 con sus reformas, y 4 textos que nunca entraron en vigor (un
+proyecto, una constitución federal, la constitución “non nata” de 1913 y
+el texto preliminar de 2024).
+
+| id | Texto | Tipo | Fecha | Artículos |
+|:---|:---|:---|:---|---:|
+| `1826` | Constitución del Estado de Nicaragua | Constitución | 1826-04-08 | 167 |
+| `1838` | Constitución Política de 1838 | Constitución | 1838-11-12 | 198 |
+| `1854-proyecto` | Proyecto de Constitución Política de 1854 | Proyecto | 1854-04-30 | 112 |
+| `1858` | Constitución Política de 1858 | Constitución | 1858-08-19 | 105 |
+| `1894` | Constitución Política de 1893 (La Libérrima) | Constitución | 1893-12-10 | 162 |
+| `1898-federal` | Constitución Política de los Estados Unidos de Centro América | Constitución federal | 1898-08-27 | 161 |
+| `1905` | Constitución Política de 1905 | Constitución | 1905-03-30 | 122 |
+| `1912` | Constitución Política de 1911 | Constitución | 1911-11-10 | 172 |
+| `1913-non-nata` | Constitución non nata de 1913 | No entró en vigor | 1913-04-03 | 184 |
+| `1939` | Constitución Política de 1939 | Constitución | 1939-03-22 | 352 |
+| `1948` | Constitución Política de 1948 | Constitución | 1948-01-21 | 289 |
+| `1950` | Constitución Política de 1950 | Constitución | 1950-11-01 | 336 |
+| `1974` | Constitución Política de 1974 | Constitución | 1974-03-14 | 343 |
+| `1987` | Constitución Política de 1987 | Constitución | 1986-11-19 | 202 |
+| `2010` | Texto con reformas incorporadas (2010) | Texto consolidado | 2010-09-16 | 202 |
+| `2014` | Texto con reformas incorporadas (2014) | Texto consolidado | 2014-02-10 | 202 |
+| `2022` | Texto consolidado (2022) | Texto consolidado | 2021-10-27 | 202 |
+| `2024` | Texto consolidado (2024) | Texto consolidado | 2024-03-13 | 202 |
+| `2024-preliminar` | Texto íntegro preliminar (2024) | Texto preliminar | 2024-11-25 | 184 |
+| `2025` | Texto íntegro (2025) | Texto consolidado | 2025-01-30 | 184 |
+
+`fuentes` también registra las 5 leyes de reforma más recientes. La Ley
+N° 1234 está incorporada en el texto de 2025; las Leyes N° 1268 a 1271
+(enero de 2026) aún no tienen un texto consolidado publicado.
+
 ## Datos
 
-El paquete contiene las constituciones políticas de los años 1974, 1987,
-2010 y 2014 (`cons_1974`, `cons_1987`, `cons_2010`, `cons_2014`). Cada
-base tiene una fila por línea del texto oficial y las siguientes
-variables:
+- **`constituciones`**: todos los textos en una sola base (10,809
+  filas). Una fila por línea del texto oficial, con estas variables:
+  1.  `id`: identificador del texto (p. ej. `"1987"`, `"2025"`,
+      `"1854-proyecto"`); se une con `fuentes$id`.
+  2.  `line`: línea en el texto de la Asamblea Nacional (entero).
+  3.  `text`: texto de la línea, sin modificar.
+  4.  `titulo`: título, normalizado (p. ej. “TÍTULO VIII”); “PREÁMBULO”
+      antes del primer título.
+  5.  `cap`: capítulo dentro del título, normalizado (p. ej. “CAPÍTULO
+      ÚNICO”).
+  6.  `subdivision`: sección dentro del capítulo, cuando existe.
+  7.  `art`: número del artículo (entero).
+  8.  `tema`: tema del título.
+  9.  `cap_tema`: nombre del capítulo, cuando el texto lo indica.
+  10. `seccion`: “preambulo”, “cuerpo” o “cierre” (promulgación, firmas
+      e historial de reformas).
+  11. `tipo`: “encabezado” (líneas de título, tema o capítulo) o
+      “texto”.
+- **`fuentes`**: un registro por documento: nombre, tipo, fechas de
+  aprobación y publicación, medio de publicación, enlace al portal de la
+  Asamblea Nacional (`url`) y si el paquete incluye su texto
+  (`snapshot`).
+- **`cons_1974`, `cons_1987`, `cons_2010`, `cons_2014`**: las bases
+  originales del paquete, que se mantienen por compatibilidad. Tienen
+  las mismas variables que `constituciones`, con `year` en lugar de
+  `id`.
 
-1.  `year`: Año de la constitución (entero).
-2.  `line`: Línea en el texto extraído de la Asamblea Nacional (entero).
-3.  `text`: Texto de la línea, sin modificar.
-4.  `titulo`: Título de la constitución, normalizado (p. ej. “TÍTULO
-    VIII”); “PREÁMBULO” antes del primer título.
-5.  `cap`: Capítulo dentro del título, normalizado (p. ej. “CAPÍTULO
-    ÚNICO”).
-6.  `art`: Número del artículo (entero).
-7.  `tema`: Tema del título.
-8.  `cap_tema`: Nombre del capítulo, cuando el texto lo indica.
-9.  `seccion`: “preambulo”, “cuerpo” o “cierre” (promulgación, firmas e
-    historial de reformas).
-10. `tipo`: “encabezado” (líneas de título, tema o capítulo) o “texto”.
+Ver `?constituciones`, `?fuentes` y `?cons_2014` para el detalle.
 
-Ver `?cons_2014` para el detalle de cada variable.
-
-## Cargando los datos
+## Ejemplos
 
 ``` r
-library(tidyverse)
-#> ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-#> ✔ dplyr     1.2.1     ✔ readr     2.2.0
-#> ✔ forcats   1.0.1     ✔ stringr   1.6.0
-#> ✔ ggplot2   4.0.3     ✔ tibble    3.3.1
-#> ✔ lubridate 1.9.5     ✔ tidyr     1.3.2
-#> ✔ purrr     1.2.2     
-#> ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-#> ✖ dplyr::filter() masks stats::filter()
-#> ✖ dplyr::lag()    masks stats::lag()
-#> ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+library(dplyr)
 library(constitucionesNic)
 
-cons_2014
-#> # A tibble: 715 × 10
-#>     year  line text              titulo cap     art tema  cap_tema seccion tipo 
-#>    <int> <int> <chr>             <chr>  <chr> <int> <chr> <chr>    <chr>   <chr>
-#>  1  2014     1 TEXTO DE LA CONS… PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#>  2  2014     2 CONSTITUCIÓN POL… PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#>  3  2014     3 Publicada en La … PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#>  4  2014     4 “El Presidente d… PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#>  5  2014     5 Hace saber al pu… PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#>  6  2014     6 CONSTITUCIÓN POL… PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#>  7  2014     7 Preámbulo         PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#>  8  2014     8 NOSOTROS,         PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#>  9  2014     9 Representantes d… PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#> 10  2014    10 Evocando          PREÁM… <NA>     NA PREÁ… <NA>     preamb… texto
-#> # ℹ 705 more rows
+constituciones
+#> # A tibble: 10,809 × 11
+#>    id     line text  titulo cap   subdivision   art tema  cap_tema seccion tipo 
+#>    <chr> <int> <chr> <chr>  <chr> <chr>       <int> <chr> <chr>    <chr>   <chr>
+#>  1 1826      1 CONS… PREÁM… <NA>  <NA>           NA PREÁ… <NA>     preamb… texto
+#>  2 1826      2 Apro… PREÁM… <NA>  <NA>           NA PREÁ… <NA>     preamb… texto
+#>  3 1826      3 Publ… PREÁM… <NA>  <NA>           NA PREÁ… <NA>     preamb… texto
+#>  4 1826      4 En p… PREÁM… <NA>  <NA>           NA PREÁ… <NA>     preamb… texto
+#>  5 1826      5 Noso… PREÁM… <NA>  <NA>           NA PREÁ… <NA>     preamb… texto
+#>  6 1826      6 Cons… PREÁM… <NA>  <NA>           NA PREÁ… <NA>     preamb… texto
+#>  7 1826      7 TITU… TÍTUL… <NA>  <NA>           NA Del … <NA>     cuerpo  enca…
+#>  8 1826      8 Del … TÍTUL… <NA>  <NA>           NA Del … <NA>     cuerpo  enca…
+#>  9 1826      9 CAPI… TÍTUL… CAPÍ… <NA>           NA Del … Del Est… cuerpo  enca…
+#> 10 1826     10 Del … TÍTUL… CAPÍ… <NA>           NA Del … Del Est… cuerpo  enca…
+#> # ℹ 10,799 more rows
 ```
 
 ``` r
-# Cantidad de líneas de texto por tema (sin encabezados, preámbulo ni cierre)
-cons_2014 %>% 
-  filter(seccion == "cuerpo", tipo == "texto") %>% 
+# Número de artículos de cada constitución vigente
+constituciones %>%
+  inner_join(fuentes %>% filter(tipo == "constitucion"), by = "id") %>%
+  filter(!is.na(art)) %>%
+  distinct(id, art) %>%
+  count(id, name = "articulos")
+#> # A tibble: 11 × 2
+#>    id    articulos
+#>    <chr>     <int>
+#>  1 1826        167
+#>  2 1838        198
+#>  3 1858        105
+#>  4 1894        162
+#>  5 1905        122
+#>  6 1912        172
+#>  7 1939        352
+#>  8 1948        289
+#>  9 1950        336
+#> 10 1974        343
+#> 11 1987        202
+```
+
+``` r
+# Líneas de texto por tema en el texto de 2025 (sin encabezados, preámbulo ni cierre)
+constituciones %>%
+  filter(id == "2025", seccion == "cuerpo", tipo == "texto") %>%
   count(tema, sort = TRUE)
 #> # A tibble: 11 × 2
 #>    tema                                                                        n
 #>    <chr>                                                                   <int>
-#>  1 DE LA ORGANIZACIÓN DEL ESTADO                                             272
-#>  2 DERECHOS, DEBERES Y GARANTÍAS DEL PUEBLO NICARAGÜENSE                     150
-#>  3 ECONOMÍA NACIONAL, REFORMA AGRARIA Y FINANZAS PÚBLICAS                     38
-#>  4 DIVISIÓN POLÍTICO ADMINISTRATIVA                                           34
+#>  1 DE LA ORGANIZACIÓN DEL ESTADO                                             176
+#>  2 DERECHOS, DEBERES Y GARANTÍAS DEL PUEBLO NICARAGÜENSE                      99
+#>  3 ECONOMÍA NACIONAL Y FINANZAS PÚBLICAS                                      30
+#>  4 PRINCIPIOS FUNDAMENTALES                                                   24
 #>  5 SUPREMACÍA DE LA CONSTITUCIÓN, SU REFORMA Y DE LAS LEYES CONSTITUCIONA…    24
-#>  6 DEFENSA Y SEGURIDAD NACIONAL. SEGURIDAD CIUDADANA                          22
-#>  7 EDUCACIÓN Y CULTURA                                                        19
+#>  6 DEFENSA Y SEGURIDAD NACIONAL. SEGURIDAD CIUDADANA                          23
+#>  7 DIVISIÓN POLÍTICO ADMINISTRATIVA                                           22
 #>  8 SOBRE EL ESTADO                                                            15
-#>  9 PRINCIPIOS FUNDAMENTALES                                                   14
-#> 10 LA NACIONALIDAD NICARAGÜENSE                                               13
-#> 11 DISPOSICIONES FINALES                                                       8
+#>  9 EDUCACIÓN Y CULTURA                                                         9
+#> 10 LA NACIONALIDAD NICARAGÜENSE                                                6
+#> 11 DISPOSICIONES FINALES                                                       4
 ```
 
-## Todas las constituciones
+## Fuentes y reproducibilidad
 
-`constituciones` reúne todos los textos (de 1826 a 2025) y `fuentes`
-describe cada documento: tipo, fechas y enlace al portal de la Asamblea
-Nacional.
+Los textos provienen del portal de legislación de la Asamblea Nacional
+(<http://legislacion.asamblea.gob.ni>). Cada texto se guardó tal como se
+descargó en `data-raw/raw/`, y las bases se reconstruyen sin conexión a
+partir de esas copias con `data-raw/DATASET.R`. El portal ha cambiado
+algunos textos desde que se descargaron, así que las copias guardadas
+son la referencia. Ver `data-raw/README.md`.
 
-``` r
-fuentes %>% 
-  filter(snapshot) %>% 
-  select(id, tipo, fecha_publicacion)
-#> # A tibble: 20 × 3
-#>    id              tipo              fecha_publicacion
-#>    <chr>           <chr>             <date>           
-#>  1 1826            constitucion      1861-04-30       
-#>  2 1838            constitucion      1861-04-30       
-#>  3 1854-proyecto   proyecto          1854-04-30       
-#>  4 1858            constitucion      1864-01-01       
-#>  5 1894            constitucion      1894-01-06       
-#>  6 1898-federal    federal           1898-10-16       
-#>  7 1905            constitucion      1905-03-30       
-#>  8 1912            constitucion      1912-01-17       
-#>  9 1913-non-nata   non_nata          1913-04-03       
-#> 10 1939            constitucion      1939-03-23       
-#> 11 1948            constitucion      1948-01-22       
-#> 12 1950            constitucion      1950-11-06       
-#> 13 1974            constitucion      1974-04-24       
-#> 14 1987            constitucion      1987-01-09       
-#> 15 2010            texto_consolidado 2010-09-16       
-#> 16 2014            texto_consolidado 2014-02-18       
-#> 17 2022            texto_consolidado 2022-09-28       
-#> 18 2024            texto_consolidado 2024-08-30       
-#> 19 2024-preliminar preliminar        2024-11-25       
-#> 20 2025            texto_consolidado 2025-02-18
-```
-
-``` r
-# Número de artículos por texto
-constituciones %>% 
-  filter(!is.na(art)) %>% 
-  distinct(id, art) %>% 
-  count(id)
-#> # A tibble: 20 × 2
-#>    id                  n
-#>    <chr>           <int>
-#>  1 1826              167
-#>  2 1838              198
-#>  3 1854-proyecto     112
-#>  4 1858              105
-#>  5 1894              162
-#>  6 1898-federal      161
-#>  7 1905              122
-#>  8 1912              172
-#>  9 1913-non-nata     184
-#> 10 1939              352
-#> 11 1948              289
-#> 12 1950              336
-#> 13 1974              343
-#> 14 1987              202
-#> 15 2010              202
-#> 16 2014              202
-#> 17 2022              202
-#> 18 2024              202
-#> 19 2024-preliminar   184
-#> 20 2025              184
-```
+El sitio web se genera a partir de estas mismas bases
+(`data-raw/site_data.R`) y su código está en `site/`.
 
 # Comentarios y sugerencias
 

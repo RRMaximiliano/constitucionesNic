@@ -11,6 +11,7 @@ knitr::opts_chunk$set(
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
+library(constitucionesNic)
 ```
 
 # constitucionesNic
@@ -19,11 +20,16 @@ knitr::opts_chunk$set(
 [![R-CMD-check](https://github.com/RRMaximiliano/constitucionesNic/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RRMaximiliano/constitucionesNic/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-El objetivo de `constitucionesNic` es tener las constituciones políticas de Nicaragua como bases de datos. Esto permite que la constitución se pueda utilizar para análisis de texto.
+`constitucionesNic` reúne los textos constitucionales de Nicaragua, de la
+Constitución de 1826 al texto íntegro de 2025, como bases de datos ordenadas:
+una fila por línea del texto oficial, con su título, capítulo, artículo y tema.
+Sirve para análisis de texto y para comparar cómo cambió la Constitución.
+
+**Sitio web:** [rrmaximiliano.com/constitucionesNic](https://www.rrmaximiliano.com/constitucionesNic/)
+compara dos textos cualesquiera como un `git diff`: líneas eliminadas en rojo,
+añadidas en verde y las palabras que cambiaron resaltadas.
 
 ## Instalación
-
-### Instalar directamente desde GitHub
 
 Puede instalar `constitucionesNic` desde GitHub con:
 
@@ -31,58 +37,109 @@ Puede instalar `constitucionesNic` desde GitHub con:
 remotes::install_github("RRMaximiliano/constitucionesNic")
 ```
 
+## Catálogo
+
+El paquete incluye `r sum(fuentes$snapshot)` textos completos: las
+`r sum(fuentes$tipo == "constitucion")` constituciones que estuvieron vigentes,
+los `r sum(fuentes$tipo == "texto_consolidado")` textos consolidados de la
+Constitución de 1987 con sus reformas, y
+`r sum(fuentes$snapshot & fuentes$linea == "alterna")` textos que nunca
+entraron en vigor (un proyecto, una constitución federal, la constitución "non
+nata" de 1913 y el texto preliminar de 2024).
+
+```{r catalogo, echo = FALSE, message = FALSE}
+etiquetas <- c(
+  constitucion = "Constitución", texto_consolidado = "Texto consolidado",
+  proyecto = "Proyecto", federal = "Constitución federal",
+  non_nata = "No entró en vigor", preliminar = "Texto preliminar"
+)
+textos <- fuentes[fuentes$snapshot, ]
+fecha <- textos$fecha_aprobacion
+fecha[is.na(fecha)] <- textos$fecha_publicacion[is.na(fecha)]
+orden <- order(fecha)
+textos <- textos[orden, ]
+fecha <- fecha[orden]
+articulos <- tapply(constituciones$art, constituciones$id,
+                    function(a) length(unique(a[!is.na(a)])))
+knitr::kable(
+  data.frame(
+    id = paste0("`", textos$id, "`"),
+    Texto = textos$nombre,
+    Tipo = unname(etiquetas[textos$tipo]),
+    Fecha = format(fecha),
+    `Artículos` = as.integer(articulos[textos$id]),
+    check.names = FALSE
+  ),
+  row.names = FALSE
+)
+```
+
+`fuentes` también registra las `r sum(fuentes$tipo == "ley_reforma")` leyes de
+reforma más recientes. La Ley N° 1234 está incorporada en el texto de 2025; las
+Leyes N° 1268 a 1271 (enero de 2026) aún no tienen un texto consolidado
+publicado.
+
 ## Datos
 
-El paquete contiene las constituciones políticas de los años 1974, 1987, 2010 y 2014 (`cons_1974`, `cons_1987`, `cons_2010`, `cons_2014`). Cada base tiene una fila por línea del texto oficial y las siguientes variables:
+- **`constituciones`**: todos los textos en una sola base
+  (`r format(nrow(constituciones), big.mark = ",")` filas). Una fila por línea
+  del texto oficial, con estas variables:
+  1. `id`: identificador del texto (p. ej. `"1987"`, `"2025"`, `"1854-proyecto"`); se une con `fuentes$id`.
+  2. `line`: línea en el texto de la Asamblea Nacional (entero).
+  3. `text`: texto de la línea, sin modificar.
+  4. `titulo`: título, normalizado (p. ej. "TÍTULO VIII"); "PREÁMBULO" antes del primer título.
+  5. `cap`: capítulo dentro del título, normalizado (p. ej. "CAPÍTULO ÚNICO").
+  6. `subdivision`: sección dentro del capítulo, cuando existe.
+  7. `art`: número del artículo (entero).
+  8. `tema`: tema del título.
+  9. `cap_tema`: nombre del capítulo, cuando el texto lo indica.
+  10. `seccion`: "preambulo", "cuerpo" o "cierre" (promulgación, firmas e historial de reformas).
+  11. `tipo`: "encabezado" (líneas de título, tema o capítulo) o "texto".
+- **`fuentes`**: un registro por documento: nombre, tipo, fechas de
+  aprobación y publicación, medio de publicación, enlace al portal de la
+  Asamblea Nacional (`url`) y si el paquete incluye su texto (`snapshot`).
+- **`cons_1974`, `cons_1987`, `cons_2010`, `cons_2014`**: las bases originales
+  del paquete, que se mantienen por compatibilidad. Tienen las mismas variables
+  que `constituciones`, con `year` en lugar de `id`.
 
-1. `year`: Año de la constitución (entero).
-2. `line`: Línea en el texto extraído de la Asamblea Nacional (entero).
-3. `text`: Texto de la línea, sin modificar.
-4. `titulo`: Título de la constitución, normalizado (p. ej. "TÍTULO VIII"); "PREÁMBULO" antes del primer título.
-5. `cap`: Capítulo dentro del título, normalizado (p. ej. "CAPÍTULO ÚNICO").
-6. `art`: Número del artículo (entero).
-7. `tema`: Tema del título.
-8. `cap_tema`: Nombre del capítulo, cuando el texto lo indica.
-9. `seccion`: "preambulo", "cuerpo" o "cierre" (promulgación, firmas e historial de reformas).
-10. `tipo`: "encabezado" (líneas de título, tema o capítulo) o "texto".
+Ver `?constituciones`, `?fuentes` y `?cons_2014` para el detalle.
 
-Ver `?cons_2014` para el detalle de cada variable.
+## Ejemplos
 
-## Cargando los datos
-
-```{r example}
-library(tidyverse)
+```{r ejemplos, message = FALSE}
+library(dplyr)
 library(constitucionesNic)
 
-cons_2014
+constituciones
 ```
 
 ```{r}
-# Cantidad de líneas de texto por tema (sin encabezados, preámbulo ni cierre)
-cons_2014 %>% 
-  filter(seccion == "cuerpo", tipo == "texto") %>% 
+# Número de artículos de cada constitución vigente
+constituciones %>%
+  inner_join(fuentes %>% filter(tipo == "constitucion"), by = "id") %>%
+  filter(!is.na(art)) %>%
+  distinct(id, art) %>%
+  count(id, name = "articulos")
+```
+
+```{r}
+# Líneas de texto por tema en el texto de 2025 (sin encabezados, preámbulo ni cierre)
+constituciones %>%
+  filter(id == "2025", seccion == "cuerpo", tipo == "texto") %>%
   count(tema, sort = TRUE)
 ```
 
+## Fuentes y reproducibilidad
 
-## Todas las constituciones
+Los textos provienen del portal de legislación de la Asamblea Nacional
+(<http://legislacion.asamblea.gob.ni>). Cada texto se guardó tal como se
+descargó en `data-raw/raw/`, y las bases se reconstruyen sin conexión a partir
+de esas copias con `data-raw/DATASET.R`. El portal ha cambiado algunos textos
+desde que se descargaron, así que las copias guardadas son la referencia. Ver
+`data-raw/README.md`.
 
-`constituciones` reúne todos los textos (de 1826 a 2025) y `fuentes` describe
-cada documento: tipo, fechas y enlace al portal de la Asamblea Nacional.
-
-```{r}
-fuentes %>% 
-  filter(snapshot) %>% 
-  select(id, tipo, fecha_publicacion)
-```
-
-```{r}
-# Número de artículos por texto
-constituciones %>% 
-  filter(!is.na(art)) %>% 
-  distinct(id, art) %>% 
-  count(id)
-```
+El sitio web se genera a partir de estas mismas bases (`data-raw/site_data.R`) y
+su código está en `site/`.
 
 # Comentarios y sugerencias
 
