@@ -8,7 +8,9 @@ en vista unificada o dividida. Para las reformas también hay una vista por
 artículo. El historial de commits aparece como barra lateral.
 
 No usa frameworks ni herramientas de compilación: HTML, CSS y módulos ES. La
-librería de diferencias (jsdiff 5.2.0) está incluida en `vendor/`.
+librería de diferencias (jsdiff 5.2.0) está incluida en `vendor/`. La fuente del código, Google Sans Code (licencia SIL OFL 1.1, ver
+`vendor/fonts/OFL.txt`), también va incluida en `vendor/fonts/` para no depender
+de servicios externos.
 
 ## Vista previa local
 
