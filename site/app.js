@@ -204,7 +204,11 @@ async function vistaVersion(id, mio) {
       contenedor.append(el('p', { text: l.text }));
     }
   }
-  mostrar(cabeceraVersion(v), indice, cuerpo);
+  mostrar(cabeceraVersion(v), indice, el('section', { class: 'archivo' },
+    el('div', { class: 'archivo-cab' },
+      el('span', { class: 'archivo-ruta', text: v.id }),
+      el('span', { class: 'archivo-meta', text: `${numero(datos.lineas.length)} líneas` })),
+    cuerpo));
   anunciar(document.title);
 }
 
@@ -295,10 +299,10 @@ function filaIgual(o, dividido) {
 function filasCambio(op, dividido) {
   if (dividido) {
     return filasDivididas(op).map((f) => el('tr', {},
-      f.izq ? [celda('num', String(f.izq.linea.line)), celda('txt elim', ...contenidoTxt(f.izq, 'eliminado'))]
-        : [celda('num'), celda('txt vacia')],
-      f.der ? [celda('num', String(f.der.linea.line)), celda('txt agr', ...contenidoTxt(f.der, 'agregado'))]
-        : [celda('num'), celda('txt vacia')]));
+      f.izq ? [celda('num elim', String(f.izq.linea.line)), celda('txt elim', ...contenidoTxt(f.izq, 'eliminado'))]
+        : [celda('num vacia'), celda('txt vacia')],
+      f.der ? [celda('num agr', String(f.der.linea.line)), celda('txt agr', ...contenidoTxt(f.der, 'agregado'))]
+        : [celda('num vacia'), celda('txt vacia')]));
   }
   return filasUnificadas(op).map((f) => {
     const elim = f.tipo === 'eliminado';
@@ -328,7 +332,7 @@ function tablaDiff(ctx, dividido) {
       const n = item.ops.length;
       const boton = el('button', {
         type: 'button', class: 'expandir',
-        text: `⋯ Mostrar ${n === 1 ? '1 línea' : `${numero(n)} líneas`} sin cambios`,
+        text: `Mostrar ${n === 1 ? '1 línea' : `${numero(n)} líneas`} sin cambios`,
         onclick: () => {
           const revelar = item.ops.map((o) => filaIgual(o, dividido));
           revelar[0].setAttribute('tabindex', '-1');
@@ -354,9 +358,11 @@ function pintarDiff(contenedor, ctx, dividido) {
   }
   contenedor.replaceChildren(el('section', { class: 'archivo' },
     el('div', { class: 'archivo-cab' },
-      el('span', { text: `a/${etiqueta(base)} → b/${head}` }),
-      el('span', { class: 'mas', text: `+${numero(stats.agregadas)}` }),
-      el('span', { class: 'menos', text: `−${numero(stats.eliminadas)}` })),
+      el('span', { class: 'archivo-ruta', text: `a/${etiqueta(base)} → b/${head}` }),
+      el('span', { class: 'archivo-stat' },
+        el('span', { class: 'mas', text: `+${numero(stats.agregadas)}` }),
+        el('span', { class: 'menos', text: `−${numero(stats.eliminadas)}` }),
+        barraCambios(stats))),
     tablaDiff(ctx, dividido)));
 }
 
@@ -426,7 +432,9 @@ function construirLog(base, head) {
   });
   check.checked = opciones.incluirAlternas;
   const nodos = [
-    el('summary', { text: `Historial · ${versiones.length} commits` }),
+    el('summary', {}, 'Historial',
+      el('span', { class: 'contador', text: String(versiones.length) }),
+      el('span', { class: 'solo-lectores', text: ' commits' })),
     el('label', { for: 'alternas' }, check, 'Mostrar proyectos y textos no vigentes'),
   ];
   if (pendientes.length) {
@@ -559,8 +567,7 @@ async function vistaComparar({ base, head }, mio) {
     el('div', { class: 'resumen-conteos' },
       el('span', { class: 'mas', text: `+${numero(stats.agregadas)} líneas` }),
       el('span', { class: 'menos', text: `−${numero(stats.eliminadas)} líneas` }),
-      el('span', { class: 'arch-sim', text: `${numero(stats.iguales)} sin cambios` }),
-      barraCambios(stats)),
+      el('span', { class: 'arch-sim', text: `${numero(stats.iguales)} sin cambios` })),
     archivo && el('p', { class: 'commit-nota' }, 'Por artículo: ', resumenNodo(headV)),
     el('div', { class: 'commit-acciones' },
       baseV && el('a', { href: `#/v/${encodeURIComponent(base)}`, text: `Leer el texto de ${base}` }),
