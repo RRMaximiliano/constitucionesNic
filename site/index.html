@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Historia constitucional de Nicaragua</title>
+  <meta name="description" content="Las constituciones y reformas de Nicaragua como un historial de git: cada texto publicado es un commit y cada reforma muestra qué palabras cambiaron.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="saltar" href="#principal" data-saltar>Saltar al contenido</a>
+  <header class="cabecera">
+    <div class="envoltura">
+      <p class="marca"><span class="marca-hash" aria-hidden="true">git log</span> --constituciones --nicaragua</p>
+      <h1>Historia constitucional de Nicaragua</h1>
+      <p class="intro">Esta página se lee como el historial de un repositorio. Cada <strong>commit</strong> es un texto constitucional publicado, con su fecha y un resumen de lo que cambió. Entre versiones de una misma constitución puede ver, artículo por artículo, las palabras añadidas en verde y las eliminadas en rojo. Cuando se aprueba una constitución nueva no hay comparación artículo a artículo: reemplaza por completo a la anterior.</p>
+      <nav class="migas" id="migas" aria-label="Navegación"></nav>
+    </div>
+  </header>
+  <main id="principal" class="envoltura" tabindex="-1" aria-live="polite">
+    <p class="estado-carga">Cargando…</p>
+  </main>
+  <footer class="pie">
+    <div class="envoltura">
+      <p>Textos: Asamblea Nacional de Nicaragua, <a href="http://legislacion.asamblea.gob.ni">legislacion.asamblea.gob.ni</a>.</p>
+      <p>Código y datos: <a href="https://github.com/RRMaximiliano/constitucionesNic">github.com/RRMaximiliano/constitucionesNic</a>.</p>
+      <p id="generado"></p>
+    </div>
+  </footer>
+  <script src="vendor/diff.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
