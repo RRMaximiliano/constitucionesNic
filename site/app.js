@@ -2,7 +2,9 @@
 // through createElement/textContent only: the texts come from an external site.
 import {
   etiquetaTipo, ordenarTimeline, resumenCambio, filtrarCambios,
-  agruparPorTitulo, tokensDiff, parsearRuta,
+  agruparPorTitulo, tokensDiff, parsearRuta, rutaComparar, VACIO,
+  padreParaComparar, comparacionInicial, archivoArticulos, diffLineas,
+  estadisticas, filasUnificadas, filasDivididas, agruparHunks, formatoHunk,
 } from './lib.js';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
@@ -24,6 +26,7 @@ let porId = new Map();
 
 // Persistent UI options (kept across re-renders and routes).
 const opciones = {
+  modo: 'unificado', // 'unificado' | 'dividido' | 'articulos'
   incluirAlternas: true,
   mostrarSinCambios: false,
   mostrarSoloForma: true,
@@ -107,72 +110,8 @@ function noEncontrado() {
   mostrar(el('section', {},
     el('h2', { text: 'No encontrado' }),
     el('p', { text: 'Esa versión no existe en el historial.' }),
-    el('p', {}, el('a', { href: '#/', text: 'Volver al historial' }))));
+    el('p', {}, el('a', { href: '#/', text: 'Volver a la comparación' }))));
   anunciar('No encontrado');
-}
-
-// ---------- timeline ----------
-function tarjetaVersion(v) {
-  const alterna = v.linea === 'alterna';
-  const nombre = el('a', { class: 'commit-nombre', href: `#/v/${encodeURIComponent(v.id)}`, text: v.nombre });
-  const meta = el('div', { class: 'commit-meta' },
-    el('time', { datetime: v.fecha, text: fechaLarga(v.fecha) }),
-    el('span', { class: 'insignia', text: etiquetaTipo(v.tipo) }),
-    alterna && el('span', { class: 'insignia no-vigente', text: 'No vigente' }),
-    resumenNodo(v));
-  const acciones = el('div', { class: 'commit-acciones' },
-    el('a', { href: `#/v/${encodeURIComponent(v.id)}`, text: 'Leer el texto' }),
-    v.padre && v.cambio && el('a', { href: `#/c/${encodeURIComponent(v.id)}`, text: 'Ver cambios' }),
-    v.url && enlaceExterno(v.url, 'Portal de la Asamblea'));
-  return el('li', { class: `commit${alterna ? ' alterna' : ''}` },
-    el('div', { class: 'commit-cuerpo' },
-      el('div', { class: 'commit-linea' },
-        el('span', { class: 'hash', title: 'Identificador del texto', text: v.commit }), nombre),
-      meta,
-      v.nota && el('p', { class: 'commit-nota', text: v.nota }),
-      v.leyes.length > 0 && el('ul', { class: 'leyes-incorporadas' },
-        v.leyes.map((l) => el('li', {}, 'Incorpora: ', l.url ? enlaceExterno(l.url, l.nombre) : l.nombre))),
-      acciones));
-}
-
-function tarjetaLey(l) {
-  return el('li', { class: 'commit pendiente' },
-    el('div', { class: 'commit-cuerpo' },
-      el('div', { class: 'commit-linea' },
-        el('span', { class: 'hash', text: 'sin commit' }),
-        l.url ? enlaceExterno(l.url, l.nombre) : el('span', { class: 'commit-nombre', text: l.nombre })),
-      el('div', { class: 'commit-meta' },
-        el('time', { datetime: l.fecha_publicacion, text: fechaLarga(l.fecha_publicacion) }),
-        el('span', { class: 'insignia', text: 'Ley de reforma' }),
-        l.publicacion && el('span', { text: l.publicacion })),
-      l.nota && el('p', { class: 'commit-nota', text: l.nota })));
-}
-
-function vistaTimeline() {
-  document.title = 'Historia constitucional de Nicaragua';
-  ponerMigas();
-  const lista = ordenarTimeline(timeline, { incluirAlternas: opciones.incluirAlternas });
-  const pendientes = lista.filter((e) => e.clase === 'ley');
-  const versiones = lista.filter((e) => e.clase === 'version');
-  const check = el('input', {
-    type: 'checkbox', id: 'alternas',
-    onchange: (ev) => { opciones.incluirAlternas = ev.target.checked; vistaTimeline(); document.getElementById('alternas').focus(); },
-  });
-  check.checked = opciones.incluirAlternas;
-  const nodos = [
-    el('div', { class: 'controles' },
-      el('label', { for: 'alternas' }, check, 'Mostrar proyectos y textos no vigentes')),
-  ];
-  if (pendientes.length) {
-    nodos.push(
-      el('h2', { class: 'seccion-titulo', text: 'Cambios sin texto consolidado' }),
-      el('p', { class: 'commit-nota', text: 'Leyes de reforma aprobadas que aún no tienen un texto consolidado publicado.' }),
-      el('ol', { class: 'registro' }, pendientes.map(tarjetaLey)));
-  }
-  nodos.push(
-    el('h2', { class: 'seccion-titulo', text: 'Textos publicados, del más reciente al más antiguo' }),
-    el('ol', { class: 'registro' }, versiones.map(tarjetaVersion)));
-  mostrar(...nodos);
 }
 
 // ---------- version text ----------
@@ -199,7 +138,7 @@ function cabeceraVersion(v) {
     el('dl', { class: 'datos' }, datos),
     el('div', { class: 'commit-acciones' },
       v.url && enlaceExterno(v.url, 'Ver en el portal de la Asamblea'),
-      v.padre && v.cambio && el('a', { href: `#/c/${encodeURIComponent(v.id)}`, text: 'Ver cambios' })));
+      el('a', { href: rutaComparar(padreParaComparar(v, timeline.versiones), v.id), text: 'Comparar con el texto anterior' })));
 }
 
 function irA(id) {
@@ -215,7 +154,7 @@ async function vistaVersion(id, mio) {
   const v = porId.get(id);
   if (!v) return noEncontrado();
   document.title = `${v.nombre} · Historia constitucional de Nicaragua`;
-  ponerMigas(el('a', { href: '#/', text: 'Historial' }), el('span', { text: v.nombre }));
+  ponerMigas(el('a', { href: '#/', text: 'Comparar' }), el('span', { text: v.nombre }));
   mostrar(el('p', { class: 'estado-carga', text: 'Cargando texto…' }));
   const datos = await cargarJson(`data/versiones/${encodeURIComponent(id)}.json`);
   if (mio !== token) return;
@@ -258,7 +197,7 @@ async function vistaVersion(id, mio) {
   anunciar(document.title);
 }
 
-// ---------- changes ----------
+// ---------- article view ----------
 function bloqueArticulo(a) {
   const renum = a.renumerado && a.art_antes != null && a.art_despues != null && a.art_antes !== a.art_despues;
   const titulo = renum ? `Art. ${a.art_antes} → Art. ${a.art_despues}` : `Art. ${a.art_despues ?? a.art_antes}`;
@@ -284,26 +223,6 @@ function bloqueArticulo(a) {
   return el('section', { class: 'arch' }, cab, cuerpo);
 }
 
-function tarjetaNueva(v, padre) {
-  const r = v.cambio.resumen;
-  const nombrePadre = padre ? padre.nombre : v.padre;
-  return el('div', { class: 'tarjeta-nueva' },
-    el('h3', { text: `Nueva constitución: reemplaza por completo a la de ${v.padre}` }),
-    el('p', { text: `${v.nombre} no es una reforma de ${nombrePadre}. Es un texto nuevo, por eso no se compara artículo por artículo.` }),
-    el('div', { class: 'antes-despues' },
-      el('div', { class: 'ant' },
-        el('div', { text: `Antes (${v.padre})` }),
-        el('div', { class: 'cifra', text: numero(r.articulos_antes) }), el('div', { text: 'artículos' }),
-        el('div', { class: 'cifra', text: numero(r.palabras_antes) }), el('div', { text: 'palabras' })),
-      el('div', { class: 'desp' },
-        el('div', { text: `Después (${v.id})` }),
-        el('div', { class: 'cifra', text: numero(r.articulos_despues) }), el('div', { text: 'artículos' }),
-        el('div', { class: 'cifra', text: numero(r.palabras_despues) }), el('div', { text: 'palabras' }))),
-    el('div', { class: 'commit-acciones' },
-      el('a', { href: `#/v/${encodeURIComponent(v.padre)}`, text: `Leer el texto de ${v.padre}` }),
-      el('a', { href: `#/v/${encodeURIComponent(v.id)}`, text: `Leer el texto de ${v.id}` })));
-}
-
 function pintarArticulos(contenedor, articulos) {
   const visibles = filtrarCambios(articulos, {
     mostrarSinCambios: opciones.mostrarSinCambios,
@@ -323,28 +242,119 @@ function pintarArticulos(contenedor, articulos) {
   anunciar(`Mostrando ${numero(visibles.length)} artículos.`);
 }
 
-async function vistaCambio(id, mio) {
-  const v = porId.get(id);
-  if (!v) return noEncontrado();
-  if (!v.padre || !v.cambio) return vistaVersion(id, mio);
-  document.title = `${v.padre} → ${v.id} · Historia constitucional de Nicaragua`;
-  ponerMigas(el('a', { href: '#/', text: 'Historial' }), el('span', { text: `${v.padre} → ${v.id}` }));
-  const padre = porId.get(v.padre);
-  if (v.cambio.tipo !== 'reforma') {
-    mostrar(el('div', { class: 'cabecera-vista' },
-      el('div', { class: 'commit-linea' }, el('span', { class: 'hash', text: v.commit }), el('h2', { text: v.nombre }))),
-    tarjetaNueva(v, padre));
-    anunciar(document.title);
+// ---------- compare (git diff) ----------
+const estrecho = matchMedia('(max-width: 759px)');
+let repintarActual = null;
+estrecho.addEventListener('change', () => { if (repintarActual) repintarActual(); });
+const opsCache = new Map();
+let focoPendiente = null;
+
+const etiqueta = (id) => (id === VACIO ? '∅' : id);
+const MODOS = [
+  { id: 'unificado', etiqueta: 'Unificado', anuncio: 'Vista unificada' },
+  { id: 'dividido', etiqueta: 'Dividido', anuncio: 'Vista dividida' },
+  { id: 'articulos', etiqueta: 'Por artículo', anuncio: 'Vista por artículo' },
+];
+
+function celda(clase, ...hijos) {
+  return el('td', { class: clase }, ...hijos);
+}
+
+// Text cell content: the changed words as <del>/<ins> when the line is
+// paired with its edited version, otherwise the plain line.
+function contenidoTxt(item, tipo) {
+  const prefijo = el('span', { class: 'solo-lectores', text: tipo === 'eliminado' ? 'Eliminado: ' : 'Añadido: ' });
+  if (!item.tokens) return [prefijo, item.linea.text];
+  return [prefijo, ...item.tokens.map((t) =>
+    t.tipo === 'igual' ? document.createTextNode(t.texto)
+      : el(tipo === 'eliminado' ? 'del' : 'ins', { text: t.texto }))];
+}
+
+function filaIgual(o, dividido) {
+  if (dividido) {
+    return el('tr', { class: 'igual' },
+      celda('num', String(o.a.line)), celda('txt', o.a.text),
+      celda('num', String(o.b.line)), celda('txt', o.b.text));
+  }
+  return el('tr', { class: 'igual' },
+    celda('num', String(o.a.line)), celda('num', String(o.b.line)),
+    el('td', { class: 'signo', 'aria-hidden': 'true', text: ' ' }), celda('txt', o.b.text));
+}
+
+function filasCambio(op, dividido) {
+  if (dividido) {
+    return filasDivididas(op).map((f) => el('tr', {},
+      f.izq ? [celda('num', String(f.izq.linea.line)), celda('txt elim', ...contenidoTxt(f.izq, 'eliminado'))]
+        : [celda('num'), celda('txt vacia')],
+      f.der ? [celda('num', String(f.der.linea.line)), celda('txt agr', ...contenidoTxt(f.der, 'agregado'))]
+        : [celda('num'), celda('txt vacia')]));
+  }
+  return filasUnificadas(op).map((f) => {
+    const elim = f.tipo === 'eliminado';
+    return el('tr', { class: elim ? 'elim' : 'agr' },
+      celda('num', elim ? String(f.linea.line) : ''), celda('num', elim ? '' : String(f.linea.line)),
+      el('td', { class: 'signo', 'aria-hidden': 'true', text: elim ? '−' : '+' }),
+      celda('txt', ...contenidoTxt(f, f.tipo)));
+  });
+}
+
+function tablaDiff(ctx, dividido) {
+  const { base, head, hunks } = ctx;
+  const cols = dividido
+    ? [el('col', { class: 'c-num' }), el('col'), el('col', { class: 'c-num' }), el('col')]
+    : [el('col', { class: 'c-num' }), el('col', { class: 'c-num' }), el('col', { class: 'c-signo' }), el('col')];
+  const filas = [];
+  for (const item of hunks) {
+    if (item.tipo === 'hunk') {
+      filas.push(el('tr', { class: 'hunk' }, el('td', { colspan: 4 },
+        el('span', { class: 'hunk-rango', text: formatoHunk(item) }), ' ',
+        el('span', { class: 'hunk-ctx', text: item.contexto }))));
+      for (const o of item.ops) {
+        if (o.tipo === 'igual') filas.push(filaIgual(o, dividido));
+        else filas.push(...filasCambio(o, dividido));
+      }
+    } else {
+      const n = item.ops.length;
+      const boton = el('button', {
+        type: 'button', class: 'expandir',
+        text: `⋯ Mostrar ${n === 1 ? '1 línea' : `${numero(n)} líneas`} sin cambios`,
+        onclick: () => {
+          const revelar = item.ops.map((o) => filaIgual(o, dividido));
+          revelar[0].setAttribute('tabindex', '-1');
+          fila.replaceWith(...revelar);
+          revelar[0].focus();
+        },
+      });
+      const fila = el('tr', { class: 'pliegue' }, el('td', { colspan: 4 }, boton));
+      filas.push(fila);
+    }
+  }
+  return el('table', { class: `diff ${dividido ? 'dividido' : 'unificado'}` },
+    el('caption', { class: 'solo-lectores', text: `Diferencias entre ${etiqueta(base)} y ${head}` }),
+    el('colgroup', {}, cols),
+    el('tbody', {}, filas));
+}
+
+function pintarDiff(contenedor, ctx, dividido) {
+  const { base, head, stats } = ctx;
+  if (!stats.agregadas && !stats.eliminadas) {
+    contenedor.replaceChildren(el('p', { class: 'vacio', text: 'Los dos textos son idénticos.' }));
     return;
   }
-  mostrar(el('p', { class: 'estado-carga', text: 'Cargando cambios…' }));
-  const datos = await cargarJson(`data/${v.cambio.archivo}`);
+  contenedor.replaceChildren(el('section', { class: 'archivo' },
+    el('div', { class: 'archivo-cab' },
+      el('span', { text: `a/${etiqueta(base)} → b/${head}` }),
+      el('span', { class: 'mas', text: `+${numero(stats.agregadas)}` }),
+      el('span', { class: 'menos', text: `−${numero(stats.eliminadas)}` })),
+    tablaDiff(ctx, dividido)));
+}
+
+async function pintarPorArticulo(contenedor, archivo, mio) {
+  contenedor.replaceChildren(el('p', { class: 'estado-carga', text: 'Cargando cambios…' }));
+  const datos = await cargarJson(`data/${archivo}`);
   if (mio !== token) return;
-  const r = v.cambio.resumen;
-
-  const resultado = el('div', { class: 'resultado' });
+  const resultado = el('div', { class: 'resultado-articulos' });
   const repintar = () => pintarArticulos(resultado, datos.articulos);
-
   const chips = ESTADOS.map((e) => {
     const b = el('button', {
       type: 'button', class: 'chip', 'aria-pressed': String(opciones.estados.has(e.id)), text: e.etiqueta,
@@ -361,28 +371,201 @@ async function vistaCambio(id, mio) {
     i.checked = opciones[clave];
     return el('label', { for: idc }, i, texto);
   };
-
-  mostrar(
-    el('div', { class: 'cabecera-vista' },
-      el('div', { class: 'commit-linea' },
-        el('span', { class: 'hash', text: v.commit }),
-        el('h2', { text: `${v.padre} → ${v.id}` })),
-      el('p', { class: 'commit-nota', text: `${v.nombre}, ${fechaLarga(v.fecha)}. Comparado con ${padre ? padre.nombre : v.padre}.` }),
-      el('div', { class: 'resumen-conteos' },
-        el('span', { class: 'mas', text: `+${r.nuevo} nuevos` }),
-        el('span', { class: 'menos', text: `−${r.derogado} derogados` }),
-        el('span', { class: 'cambia', text: `~${r.modificado} modificados` }),
-        el('span', { class: 'arch-sim', text: `${r.solo_forma} solo de forma · ${r.renumerado} renumerados · ${r.sin_cambios} sin cambios` })),
-      el('div', { class: 'commit-acciones' },
-        el('a', { href: `#/v/${encodeURIComponent(v.id)}`, text: 'Leer el texto completo' }),
-        v.url && enlaceExterno(v.url, 'Ver en el portal de la Asamblea'))),
+  contenedor.replaceChildren(
     el('div', { class: 'controles', role: 'group', 'aria-label': 'Filtros' },
       ...chips,
       casilla('sin-cambios', 'Mostrar artículos sin cambios', 'mostrarSinCambios'),
       casilla('solo-forma', 'Incluir cambios de forma', 'mostrarSoloForma')),
     resultado);
   repintar();
-  anunciar(document.title);
+}
+
+function barraCambios(stats) {
+  const total = stats.agregadas + stats.eliminadas;
+  let verdes = 0;
+  let rojos = 0;
+  if (total) {
+    verdes = Math.round((5 * stats.agregadas) / total);
+    rojos = Math.round((5 * stats.eliminadas) / total);
+    if (stats.agregadas && !verdes) verdes = 1;
+    if (stats.eliminadas && !rojos) rojos = 1;
+    while (verdes + rojos > 5) { if (verdes > rojos) verdes--; else rojos--; }
+  }
+  const cuadros = [];
+  for (let i = 0; i < 5; i++) {
+    cuadros.push(el('span', { class: `cuadro ${i < verdes ? 'mas' : i < verdes + rojos ? 'menos' : 'neutro'}` }));
+  }
+  return el('span', { class: 'barra', 'aria-hidden': 'true' }, cuadros);
+}
+
+function construirLog(base, head) {
+  const lista = ordenarTimeline(timeline, { incluirAlternas: opciones.incluirAlternas });
+  const pendientes = lista.filter((e) => e.clase === 'ley');
+  const versiones = lista.filter((e) => e.clase === 'version');
+  const check = el('input', {
+    type: 'checkbox', id: 'alternas',
+    onchange: (ev) => {
+      opciones.incluirAlternas = ev.target.checked;
+      const abierto = log.open;
+      const nuevo = construirLog(base, head);
+      nuevo.open = abierto;
+      log.replaceWith(nuevo);
+      document.getElementById('alternas').focus();
+    },
+  });
+  check.checked = opciones.incluirAlternas;
+  const nodos = [
+    el('summary', { text: `Historial · ${versiones.length} commits` }),
+    el('label', { for: 'alternas' }, check, 'Mostrar proyectos y textos no vigentes'),
+  ];
+  if (pendientes.length) {
+    nodos.push(
+      el('h3', { class: 'log-titulo', text: 'Cambios sin commit' }),
+      el('ol', { class: 'log-lista' }, pendientes.map((l) => el('li', { class: 'log-pendiente' },
+        el('span', { class: 'hash', text: 'sin commit' }), ' · ',
+        l.url ? enlaceExterno(l.url, l.nombre) : l.nombre, ' · ',
+        el('time', { datetime: l.fecha_publicacion, text: fechaLarga(l.fecha_publicacion) })))));
+  }
+  nodos.push(
+    el('h3', { class: 'log-titulo', text: 'Commits' }),
+    el('ol', { class: 'log-lista' }, versiones.map((v) => {
+      const padre = padreParaComparar(v, timeline.versiones);
+      const actual = v.id === head && base === padre;
+      return el('li', {}, el('a', {
+        class: `log-commit${v.linea === 'alterna' ? ' alterna' : ''}`,
+        href: rutaComparar(padre, v.id),
+        'aria-current': actual ? 'page' : null,
+      },
+      el('span', { class: 'hash', text: v.commit }),
+      el('span', { class: 'log-id', text: v.id }),
+      el('span', { class: 'log-nombre', text: v.nombre }),
+      el('span', { class: 'log-resumen' }, v.padre ? resumenNodo(v) : 'Texto completo'),
+      v.linea === 'alterna' && el('span', { class: 'insignia no-vigente', text: 'No vigente' })));
+    })));
+  const log = el('details', { class: 'log' }, nodos);
+  log.open = matchMedia('(min-width: 1100px)').matches;
+  return log;
+}
+
+function selectorVersion(idSel, valor, conVacio) {
+  const orden = [...timeline.versiones].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.id.localeCompare(b.id));
+  const grupo = (titulo, linea) => el('optgroup', { label: titulo },
+    orden.filter((v) => v.linea === linea).map((v) => el('option', { value: v.id, text: `${v.id} · ${v.nombre}` })));
+  const sel = el('select', {
+    id: idSel,
+    onchange: (ev) => {
+      focoPendiente = ev.target.id;
+      location.hash = rutaComparar(document.getElementById('sel-base').value, document.getElementById('sel-head').value);
+    },
+  },
+  conVacio && el('option', { value: VACIO, text: '∅ Texto vacío' }),
+  grupo('Textos vigentes en su momento', 'principal'),
+  grupo('Proyectos y textos no vigentes', 'alterna'));
+  sel.value = valor;
+  return sel;
+}
+
+async function vistaComparar({ base, head }, mio) {
+  const headV = porId.get(head);
+  const baseV = base === VACIO ? null : porId.get(base);
+  document.title = `${etiqueta(base)} → ${head} · Historia constitucional de Nicaragua`;
+  ponerMigas();
+  mostrar(el('p', { class: 'estado-carga', text: 'Cargando textos…' }));
+  const [datosBase, datosHead] = await Promise.all([
+    baseV ? cargarJson(`data/versiones/${encodeURIComponent(base)}.json`) : { lineas: [] },
+    cargarJson(`data/versiones/${encodeURIComponent(head)}.json`),
+  ]);
+  if (mio !== token) return;
+
+  const clave = `${base}...${head}`;
+  if (!opsCache.has(clave)) {
+    opsCache.set(clave, diffLineas(datosBase.lineas, datosHead.lineas, { diffArrays: Diff.diffArrays, diffWords: Diff.diffWordsWithSpace }));
+  }
+  const ops = opsCache.get(clave);
+  const stats = estadisticas(ops);
+  const ctx = { base, head, ops, stats, hunks: agruparHunks(ops, 1) };
+  const archivo = archivoArticulos(base, headV);
+
+  const incorporadas = base === headV.padre
+    ? ordenarTimeline(timeline).find((e) => e.clase === 'version' && e.id === head)?.leyes ?? []
+    : [];
+
+  const resultado = el('div', { class: 'resultado' });
+  const botones = [];
+  const modoEfectivo = () => {
+    if (opciones.modo === 'articulos' && archivo) return 'articulos';
+    if (opciones.modo === 'dividido' && !estrecho.matches) return 'dividido';
+    return 'unificado';
+  };
+  const repintar = () => {
+    const modo = modoEfectivo();
+    for (const [m, b] of botones) {
+      b.setAttribute('aria-pressed', String(m.id === modo));
+      if (m.id === 'dividido') b.hidden = estrecho.matches;
+    }
+    if (modo === 'articulos') {
+      pintarPorArticulo(resultado, archivo, mio).catch((e) => {
+        if (mio !== token) return;
+        console.error(e);
+        resultado.replaceChildren(el('p', { class: 'estado-error', role: 'alert', text: 'No se pudieron cargar los cambios por artículo.' }));
+      });
+    } else {
+      pintarDiff(resultado, ctx, modo === 'dividido');
+    }
+  };
+  repintarActual = repintar;
+
+  for (const m of MODOS) {
+    if (m.id === 'articulos' && !archivo) continue;
+    const b = el('button', {
+      type: 'button', class: 'chip', 'aria-pressed': 'false', text: m.etiqueta,
+      onclick: () => { opciones.modo = m.id; repintar(); anunciar(m.anuncio); },
+    });
+    botones.push([m, b]);
+  }
+
+  const selBase = selectorVersion('sel-base', base, true);
+  const selHead = selectorVersion('sel-head', head, false);
+  const rango = el('div', { class: 'rango', role: 'group', 'aria-label': 'Elegir versiones' },
+    el('label', { for: 'sel-base' }, el('span', { class: 'rango-etiqueta', text: 'base' }), selBase),
+    el('button', {
+      type: 'button', class: 'invertir', 'aria-label': 'Invertir base y comparación', text: '⇄',
+      disabled: base === VACIO,
+      onclick: () => { location.hash = rutaComparar(head, base); },
+    }),
+    el('label', { for: 'sel-head' }, el('span', { class: 'rango-etiqueta', text: 'comparar' }), selHead));
+
+  const cabecera = el('div', { class: 'cabecera-vista' },
+    el('div', { class: 'commit-linea' },
+      el('span', { class: 'hash', title: 'Identificador del texto', text: headV.commit }),
+      el('h2', { text: `${etiqueta(base)} → ${head}` })),
+    el('p', { class: 'commit-nota', text: `${headV.nombre}, ${fechaLarga(headV.fecha)}. Comparado con ${baseV ? baseV.nombre : 'un texto vacío'}.` }),
+    baseV && baseV.familia !== headV.familia && el('p', { class: 'aviso', text: 'Son constituciones distintas: una no reforma a la otra, pero el texto se compara igual, línea por línea.' }),
+    incorporadas.length > 0 && el('ul', { class: 'leyes-incorporadas' },
+      incorporadas.map((l) => el('li', {}, 'Incorpora: ', l.url ? enlaceExterno(l.url, l.nombre) : l.nombre))),
+    el('div', { class: 'resumen-conteos' },
+      el('span', { class: 'mas', text: `+${numero(stats.agregadas)} líneas` }),
+      el('span', { class: 'menos', text: `−${numero(stats.eliminadas)} líneas` }),
+      el('span', { class: 'arch-sim', text: `${numero(stats.iguales)} sin cambios` }),
+      barraCambios(stats)),
+    archivo && el('p', { class: 'commit-nota' }, 'Por artículo: ', resumenNodo(headV)),
+    el('div', { class: 'commit-acciones' },
+      baseV && el('a', { href: `#/v/${encodeURIComponent(base)}`, text: `Leer el texto de ${base}` }),
+      el('a', { href: `#/v/${encodeURIComponent(head)}`, text: `Leer el texto de ${head}` }),
+      headV.url && enlaceExterno(headV.url, 'Portal de la Asamblea')));
+
+  mostrar(el('div', { class: 'comparar' },
+    el('div', { class: 'comparar-principal' },
+      rango, cabecera,
+      el('div', { class: 'modos', role: 'group', 'aria-label': 'Vista' }, botones.map(([, b]) => b)),
+      resultado),
+    construirLog(base, head)));
+  repintar();
+  anunciar(`${etiqueta(base)} → ${head}: ${numero(stats.agregadas)} líneas añadidas, ${numero(stats.eliminadas)} eliminadas.`);
+  if (focoPendiente) {
+    document.getElementById(focoPendiente)?.focus();
+    focoPendiente = null;
+  }
 }
 
 // ---------- router ----------
@@ -391,11 +574,23 @@ async function enrutar() {
   const mio = ++token;
   if (!timeline) return;
   const ruta = parsearRuta(location.hash);
-  document.body.classList.toggle('inicio', ruta.vista === 'timeline');
+  document.body.classList.toggle('inicio', ruta.vista === 'inicio');
+  document.body.classList.toggle('ancho', ruta.vista === 'inicio' || ruta.vista === 'comparar');
+  repintarActual = null;
   try {
     if (ruta.vista === 'version') await vistaVersion(ruta.id, mio);
-    else if (ruta.vista === 'cambio') await vistaCambio(ruta.id, mio);
-    else { vistaTimeline(); anunciar(document.title); }
+    else if (ruta.vista === 'cambio') {
+      const v = porId.get(ruta.id);
+      if (!v) return noEncontrado();
+      const base = padreParaComparar(v, timeline.versiones);
+      if (archivoArticulos(base, v)) opciones.modo = 'articulos';
+      location.replace(rutaComparar(base, v.id));
+    } else if (ruta.vista === 'comparar') {
+      if (!porId.has(ruta.head) || !(ruta.base === VACIO || porId.has(ruta.base))) return noEncontrado();
+      await vistaComparar({ base: ruta.base, head: ruta.head }, mio);
+    } else {
+      await vistaComparar(comparacionInicial(timeline.versiones), mio);
+    }
   } catch (e) {
     if (mio !== token) return;
     console.error(e);
