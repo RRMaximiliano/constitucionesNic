@@ -104,6 +104,17 @@ function ponerMigas(...partes) {
   migas.replaceChildren(...nodos);
 }
 
+// Loading placeholder shaped like the content it stands in for. The text is
+// for screen readers; the bars are decoration.
+function esqueleto(texto, filas = 8) {
+  const anchos = [92, 78, 96, 64, 88, 72, 95, 58, 84, 70];
+  return el('div', { class: 'esqueleto', 'aria-busy': 'true' },
+    el('span', { class: 'solo-lectores', text: texto }),
+    Array.from({ length: filas }, (_, i) => el('span', {
+      class: 'esq-linea', 'aria-hidden': 'true', style: `width: ${anchos[i % anchos.length]}%`,
+    })));
+}
+
 function noEncontrado() {
   document.title = 'No encontrado · Historia constitucional de Nicaragua';
   ponerMigas();
@@ -155,7 +166,7 @@ async function vistaVersion(id, mio) {
   if (!v) return noEncontrado();
   document.title = `${v.nombre} · Historia constitucional de Nicaragua`;
   ponerMigas(el('a', { href: '#/', text: 'Comparar' }), el('span', { text: v.nombre }));
-  mostrar(el('p', { class: 'estado-carga', text: 'Cargando texto…' }));
+  mostrar(esqueleto('Cargando texto…', 10));
   const datos = await cargarJson(`data/versiones/${encodeURIComponent(id)}.json`);
   if (mio !== token) return;
 
@@ -350,7 +361,7 @@ function pintarDiff(contenedor, ctx, dividido) {
 }
 
 async function pintarPorArticulo(contenedor, archivo, mio) {
-  contenedor.replaceChildren(el('p', { class: 'estado-carga', text: 'Cargando cambios…' }));
+  contenedor.replaceChildren(esqueleto('Cargando cambios…'));
   const datos = await cargarJson(`data/${archivo}`);
   if (mio !== token) return;
   const resultado = el('div', { class: 'resultado-articulos' });
@@ -421,17 +432,17 @@ function construirLog(base, head) {
   if (pendientes.length) {
     nodos.push(
       el('h3', { class: 'log-titulo', text: 'Cambios sin commit' }),
-      el('ol', { class: 'log-lista' }, pendientes.map((l) => el('li', { class: 'log-pendiente' },
-        el('span', { class: 'hash', text: 'sin commit' }), ' · ',
-        l.url ? enlaceExterno(l.url, l.nombre) : l.nombre, ' · ',
+      el('ol', { class: 'log-lista log-grafo pendientes' }, pendientes.map((l) => el('li', { class: 'log-pendiente' },
+        l.url ? enlaceExterno(l.url, l.nombre) : el('span', { text: l.nombre }),
         el('time', { datetime: l.fecha_publicacion, text: fechaLarga(l.fecha_publicacion) })))));
   }
   nodos.push(
     el('h3', { class: 'log-titulo', text: 'Commits' }),
-    el('ol', { class: 'log-lista' }, versiones.map((v) => {
+    el('ol', { class: 'log-lista log-grafo' }, versiones.map((v) => {
       const padre = padreParaComparar(v, timeline.versiones);
       const actual = v.id === head && base === padre;
-      return el('li', {}, el('a', {
+      const clases = [v.linea === 'alterna' && 'alterna', actual && 'actual'].filter(Boolean).join(' ');
+      return el('li', { class: clases || null }, el('a', {
         class: `log-commit${v.linea === 'alterna' ? ' alterna' : ''}`,
         href: rutaComparar(padre, v.id),
         'aria-current': actual ? 'page' : null,
@@ -472,7 +483,7 @@ async function vistaComparar({ base, head }, mio) {
   const baseV = base === VACIO ? null : porId.get(base);
   document.title = `${etiqueta(base)} → ${head} · Historia constitucional de Nicaragua`;
   ponerMigas();
-  mostrar(el('p', { class: 'estado-carga', text: 'Cargando textos…' }));
+  mostrar(esqueleto('Cargando textos…', 12));
   const [datosBase, datosHead] = await Promise.all([
     baseV ? cargarJson(`data/versiones/${encodeURIComponent(base)}.json`) : { lineas: [] },
     cargarJson(`data/versiones/${encodeURIComponent(head)}.json`),
@@ -520,7 +531,7 @@ async function vistaComparar({ base, head }, mio) {
   for (const m of MODOS) {
     if (m.id === 'articulos' && !archivo) continue;
     const b = el('button', {
-      type: 'button', class: 'chip', 'aria-pressed': 'false', text: m.etiqueta,
+      type: 'button', class: 'segmento', 'aria-pressed': 'false', text: m.etiqueta,
       onclick: () => { opciones.modo = m.id; repintar(); anunciar(m.anuncio); },
     });
     botones.push([m, b]);
