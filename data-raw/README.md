@@ -33,3 +33,17 @@ varias líneas del texto habían cambiado (1974: 9 de 867; 1987: 56 de 528;
 2010: 18 de 665; 2014: 4 de 715). Actualizar `raw/` desde el sitio cambiará los
 datos publicados. Hágalo solo de forma intencional, revise las diferencias y
 actualice las pruebas en `tests/testthat/test-invariants.R`.
+
+## Textos agregados en noviembre de 2026
+
+`fuentes.csv` registra los 25 documentos de la categoría "Constituciones
+Políticas de Nicaragua" del portal (consultada el 2026-11-20): 20 textos
+completos y 5 leyes de reforma. `fetch_sources.R` descargó los 16 textos que
+faltaban en `raw/` (todos menos 1974, 1987, 2010 y 2014, que siguen siendo los
+de 2021). El script nunca sobrescribe un archivo existente.
+
+Para descargar de nuevo los textos que falten:
+
+    Rscript data-raw/fetch_sources.R
+
+Requiere internet y el paquete htm2txt.
