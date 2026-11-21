@@ -157,3 +157,8 @@ del::before { content: "−"; font-size: .7em; vertical-align: super; opacity: .
   .commit-cuerpo { transition: border-color .15s; }
   .commit:hover .commit-cuerpo { border-color: var(--lago); }
 }
+
+.solo-lectores { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+body:not(.inicio) .intro { display: none; }
+body:not(.inicio) .cabecera { padding-bottom: 1rem; }
+body:not(.inicio) h1 { font-size: clamp(1.4rem, 4.5vw, 2rem); margin-bottom: .5rem; }

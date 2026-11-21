@@ -83,6 +83,11 @@ async function cargarJson(ruta) {
   return cache.get(ruta);
 }
 
+const anuncio = document.getElementById('anuncio');
+function anunciar(texto) {
+  anuncio.textContent = texto;
+}
+
 function mostrar(...nodos) {
   main.replaceChildren(...nodos);
 }
@@ -103,6 +108,7 @@ function noEncontrado() {
     el('h2', { text: 'No encontrado' }),
     el('p', { text: 'Esa versión no existe en el historial.' }),
     el('p', {}, el('a', { href: '#/', text: 'Volver al historial' }))));
+  anunciar('No encontrado');
 }
 
 // ---------- timeline ----------
@@ -205,13 +211,14 @@ function irA(id) {
   destino.focus({ preventScroll: true });
 }
 
-async function vistaVersion(id) {
+async function vistaVersion(id, mio) {
   const v = porId.get(id);
   if (!v) return noEncontrado();
   document.title = `${v.nombre} · Historia constitucional de Nicaragua`;
   ponerMigas(el('a', { href: '#/', text: 'Historial' }), el('span', { text: v.nombre }));
   mostrar(el('p', { class: 'estado-carga', text: 'Cargando texto…' }));
   const datos = await cargarJson(`data/versiones/${encodeURIComponent(id)}.json`);
+  if (mio !== token) return;
 
   let encabezados = datos.lineas.filter((l) => l.tipo === 'encabezado' && claseEncabezado(l) === 'titulo');
   if (!encabezados.length) encabezados = datos.lineas.filter((l) => l.tipo === 'encabezado' && claseEncabezado(l) === 'cap');
@@ -248,6 +255,7 @@ async function vistaVersion(id) {
     }
   }
   mostrar(cabeceraVersion(v), indice, cuerpo);
+  anunciar(document.title);
 }
 
 // ---------- changes ----------
@@ -304,6 +312,7 @@ function pintarArticulos(contenedor, articulos) {
   });
   if (!visibles.length) {
     contenedor.replaceChildren(el('p', { class: 'vacio', text: 'Ningún artículo coincide con los filtros elegidos.' }));
+    anunciar('Ningún artículo coincide con los filtros elegidos.');
     return;
   }
   const nodos = [el('p', { class: 'commit-nota', text: `${numero(visibles.length)} artículos mostrados.` })];
@@ -311,12 +320,13 @@ function pintarArticulos(contenedor, articulos) {
     nodos.push(el('h3', { class: 'grupo-titulo', text: g.titulo }), ...g.articulos.map(bloqueArticulo));
   }
   contenedor.replaceChildren(...nodos);
+  anunciar(`Mostrando ${numero(visibles.length)} artículos.`);
 }
 
-async function vistaCambio(id) {
+async function vistaCambio(id, mio) {
   const v = porId.get(id);
   if (!v) return noEncontrado();
-  if (!v.padre || !v.cambio) return vistaVersion(id);
+  if (!v.padre || !v.cambio) return vistaVersion(id, mio);
   document.title = `${v.padre} → ${v.id} · Historia constitucional de Nicaragua`;
   ponerMigas(el('a', { href: '#/', text: 'Historial' }), el('span', { text: `${v.padre} → ${v.id}` }));
   const padre = porId.get(v.padre);
@@ -324,10 +334,12 @@ async function vistaCambio(id) {
     mostrar(el('div', { class: 'cabecera-vista' },
       el('div', { class: 'commit-linea' }, el('span', { class: 'hash', text: v.commit }), el('h2', { text: v.nombre }))),
     tarjetaNueva(v, padre));
+    anunciar(document.title);
     return;
   }
   mostrar(el('p', { class: 'estado-carga', text: 'Cargando cambios…' }));
   const datos = await cargarJson(`data/${v.cambio.archivo}`);
+  if (mio !== token) return;
   const r = v.cambio.resumen;
 
   const resultado = el('div', { class: 'resultado' });
@@ -370,6 +382,7 @@ async function vistaCambio(id) {
       casilla('solo-forma', 'Incluir cambios de forma', 'mostrarSoloForma')),
     resultado);
   repintar();
+  anunciar(document.title);
 }
 
 // ---------- router ----------
@@ -378,10 +391,11 @@ async function enrutar() {
   const mio = ++token;
   if (!timeline) return;
   const ruta = parsearRuta(location.hash);
+  document.body.classList.toggle('inicio', ruta.vista === 'timeline');
   try {
-    if (ruta.vista === 'version') await vistaVersion(ruta.id);
-    else if (ruta.vista === 'cambio') await vistaCambio(ruta.id);
-    else vistaTimeline();
+    if (ruta.vista === 'version') await vistaVersion(ruta.id, mio);
+    else if (ruta.vista === 'cambio') await vistaCambio(ruta.id, mio);
+    else { vistaTimeline(); anunciar(document.title); }
   } catch (e) {
     if (mio !== token) return;
     console.error(e);
