@@ -5,10 +5,7 @@
 
 <!-- badges: start -->
 
-[![Travis build
-status](https://travis-ci.com/RRMaximiliano/constitucionesNic.svg?branch=master)](https://travis-ci.com/RRMaximiliano/constitucionesNic)
-[![AppVeyor build
-status](https://ci.appveyor.com/api/projects/status/github/RRMaximiliano/constitucionesNic?branch=master&svg=true)](https://ci.appveyor.com/project/RRMaximiliano/constitucionesNic)
+[![R-CMD-check](https://github.com/RRMaximiliano/constitucionesNic/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RRMaximiliano/constitucionesNic/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 El objetivo de `constitucionesNic` es tener las constituciones políticas
