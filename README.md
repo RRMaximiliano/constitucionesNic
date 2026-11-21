@@ -99,6 +99,72 @@ cons_2014 %>%
 #> 11 DISPOSICIONES FINALES                                                       8
 ```
 
+## Todas las constituciones
+
+`constituciones` reúne todos los textos (de 1826 a 2025) y `fuentes`
+describe cada documento: tipo, fechas y enlace al portal de la Asamblea
+Nacional.
+
+``` r
+fuentes %>% 
+  filter(snapshot) %>% 
+  select(id, tipo, fecha_publicacion)
+#> # A tibble: 20 × 3
+#>    id              tipo              fecha_publicacion
+#>    <chr>           <chr>             <date>           
+#>  1 1826            constitucion      1861-04-30       
+#>  2 1838            constitucion      1861-04-30       
+#>  3 1854-proyecto   proyecto          1854-04-30       
+#>  4 1858            constitucion      1864-01-01       
+#>  5 1894            constitucion      1894-01-06       
+#>  6 1898-federal    federal           1898-10-16       
+#>  7 1905            constitucion      1905-03-30       
+#>  8 1912            constitucion      1912-01-17       
+#>  9 1913-non-nata   non_nata          1913-04-03       
+#> 10 1939            constitucion      1939-03-23       
+#> 11 1948            constitucion      1948-01-22       
+#> 12 1950            constitucion      1950-11-06       
+#> 13 1974            constitucion      1974-04-24       
+#> 14 1987            constitucion      1987-01-09       
+#> 15 2010            texto_consolidado 2010-09-16       
+#> 16 2014            texto_consolidado 2014-02-18       
+#> 17 2022            texto_consolidado 2022-09-28       
+#> 18 2024            texto_consolidado 2024-08-30       
+#> 19 2024-preliminar preliminar        2024-11-25       
+#> 20 2025            texto_consolidado 2025-02-18
+```
+
+``` r
+# Número de artículos por texto
+constituciones %>% 
+  filter(!is.na(art)) %>% 
+  distinct(id, art) %>% 
+  count(id)
+#> # A tibble: 20 × 2
+#>    id                  n
+#>    <chr>           <int>
+#>  1 1826              167
+#>  2 1838              198
+#>  3 1854-proyecto     112
+#>  4 1858              105
+#>  5 1894              162
+#>  6 1898-federal      161
+#>  7 1905              122
+#>  8 1912              172
+#>  9 1913-non-nata     184
+#> 10 1939              352
+#> 11 1948              289
+#> 12 1950              336
+#> 13 1974              343
+#> 14 1987              202
+#> 15 2010              202
+#> 16 2014              202
+#> 17 2022              202
+#> 18 2024              202
+#> 19 2024-preliminar   184
+#> 20 2025              184
+```
+
 # Comentarios y sugerencias
 
 Para realizar comentarios o sugerencias sobre la base de datos puedes

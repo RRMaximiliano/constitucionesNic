@@ -1,7 +1,7 @@
 Package: constitucionesNic
 Type: Package
 Title: Constituciones Politicas De Nicaragua
-Version: 0.2.0
+Version: 0.3.0
 Author: Rony Rodriguez Ramirez <maximiliano.rod.ra@gmail.com>
 Maintainer: Rony Rodriguez Ramirez <maximiliano.rod.ra@gmail.com>
 Description: Datasets de las constituciones políticas de Nicaragua.

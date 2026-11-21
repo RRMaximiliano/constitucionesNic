@@ -1,3 +1,22 @@
+# constitucionesNic 0.3.0
+
+## Nuevos datos
+
+* `constituciones`: el texto completo de las 20 constituciones, textos
+  consolidados y proyectos publicados por la Asamblea Nacional, de 1826 a 2025,
+  una fila por línea, con las mismas columnas estructurales que `cons_2014`
+  (más `id` y `subdivision`).
+* `fuentes`: registro de los 25 documentos de la categoría "Constituciones
+  Políticas de Nicaragua" (constituciones, textos consolidados, proyectos y
+  leyes de reforma), con fechas, tipo y enlace al portal.
+
+## Cambios internos
+
+* `data-raw/fetch_sources.R` descarga los textos que faltan; `DATASET.R`
+  reconoce más formatos de encabezados (mayúsculas o minúsculas, numeración
+  arábiga, "SECCIÓN", "TÍTULO PRELIMINAR", nombres en la misma línea).
+  `cons_1974`, `cons_1987`, `cons_2010` y `cons_2014` no cambian.
+
 # constitucionesNic 0.2.0
 
 ## Cambios que rompen compatibilidad

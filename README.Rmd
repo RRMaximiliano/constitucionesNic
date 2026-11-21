@@ -65,6 +65,25 @@ cons_2014 %>%
 ```
 
 
+## Todas las constituciones
+
+`constituciones` reúne todos los textos (de 1826 a 2025) y `fuentes` describe
+cada documento: tipo, fechas y enlace al portal de la Asamblea Nacional.
+
+```{r}
+fuentes %>% 
+  filter(snapshot) %>% 
+  select(id, tipo, fecha_publicacion)
+```
+
+```{r}
+# Número de artículos por texto
+constituciones %>% 
+  filter(!is.na(art)) %>% 
+  distinct(id, art) %>% 
+  count(id)
+```
+
 # Comentarios y sugerencias
 
 Para realizar comentarios o sugerencias sobre la base de datos puedes abrir un issue en este repositorio: https://github.com/RRMaximiliano/constitucionesNic/issues
