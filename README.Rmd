@@ -33,15 +33,20 @@ remotes::install_github("RRMaximiliano/constitucionesNic")
 
 ## Datos
 
-Por ejempo, el paquete contiene las constituciones políticas de los años 1974, 1987, 2010, y 2014. Cada una de estas bases tienen las siguientes variables:
+El paquete contiene las constituciones políticas de los años 1974, 1987, 2010 y 2014 (`cons_1974`, `cons_1987`, `cons_2010`, `cons_2014`). Cada base tiene una fila por línea del texto oficial y las siguientes variables:
 
-1. `year`: Año de publicación.
-2. `line`: Línea en el texto extraído de la Asamblea Nacional.
-3. `text`: Texto de la constitución de acuerdo a la línea.
-4. `titulo`: Título de la constitución.
-5. `cap`: Capítulo de la constitución (por Título).
-6. `art`: Artículo de la constitución.
-7. `tema`: Tema de la constitución (por Título). 
+1. `year`: Año de la constitución (entero).
+2. `line`: Línea en el texto extraído de la Asamblea Nacional (entero).
+3. `text`: Texto de la línea, sin modificar.
+4. `titulo`: Título de la constitución, normalizado (p. ej. "TÍTULO VIII"); "PREÁMBULO" antes del primer título.
+5. `cap`: Capítulo dentro del título, normalizado (p. ej. "CAPÍTULO ÚNICO").
+6. `art`: Número del artículo (entero).
+7. `tema`: Tema del título.
+8. `cap_tema`: Nombre del capítulo, cuando el texto lo indica.
+9. `seccion`: "preambulo", "cuerpo" o "cierre" (promulgación, firmas e historial de reformas).
+10. `tipo`: "encabezado" (líneas de título, tema o capítulo) o "texto".
+
+Ver `?cons_2014` para el detalle de cada variable.
 
 ## Cargando los datos
 
@@ -53,8 +58,9 @@ cons_2014
 ```
 
 ```{r}
-# Cantidad de lineas por Temas
+# Cantidad de líneas de texto por tema (sin encabezados, preámbulo ni cierre)
 cons_2014 %>% 
+  filter(seccion == "cuerpo", tipo == "texto") %>% 
   count(tema, sort = TRUE)
 ```
 

@@ -5,23 +5,43 @@
 \alias{cons_1987}
 \title{Constitución Política de Nicaragua, 1987}
 \format{
-Un \code{tibble} con 7 variables:
+Un \code{tibble} con 10 variables:
 
 \describe{
-\item{year}{Año que fue aprovada la constitución}
-\item{line}{Línea en el texto extraído de la Asamblea Nacional}
-\item{txt}{Texto de la constitución de acuerdo a su línea}
-\item{titulo}{Título de la constitución}
-\item{cap}{Capítulo de la constitución de acuerdo al título}
-\item{art}{Artículo de la constitución}
-\item{tema}{Tema de la constitución de acuerdo al título}
+\item{year}{(entero) Año de la constitución.}
+\item{line}{(entero) Número de línea en el texto extraído de la Asamblea
+  Nacional. Puede tener saltos donde se eliminó una línea con solo un punto.}
+\item{text}{(texto) Texto de la línea, sin modificar.}
+\item{titulo}{(texto) Título al que pertenece la línea, normalizado
+  (p. ej. \code{"TÍTULO VIII"}). \code{"PREÁMBULO"} antes del primer
+  título; \code{NA} en el cierre.}
+\item{cap}{(texto) Capítulo dentro del título, normalizado (p. ej.
+  \code{"CAPÍTULO ÚNICO"}). \code{NA} fuera del cuerpo y en las líneas de
+  encabezado del título.}
+\item{art}{(entero) Número del artículo. \code{NA} en encabezados, en
+  el preámbulo y en el cierre.}
+\item{tema}{(texto) Tema del título según el texto oficial.
+  \code{"PREÁMBULO"} en el preámbulo. Si el título no tiene tema propio y
+  consta de un solo capítulo, se usa el nombre de ese capítulo.
+  \code{NA} en el cierre o si no hay tema aplicable.}
+\item{cap_tema}{(texto) Nombre del capítulo, cuando el texto lo indica;
+  \code{NA} en otro caso.}
+\item{seccion}{(texto) \code{"preambulo"}, \code{"cuerpo"} o
+  \code{"cierre"} (promulgación, firmas e historial de reformas).}
+\item{tipo}{(texto) \code{"encabezado"} para líneas de título, tema o
+  capítulo; \code{"texto"} para el resto.}
 }
+}
+\source{
+Asamblea Nacional de Nicaragua, Legislación de Nicaragua
+  (\url{http://legislacion.asamblea.gob.ni}), texto extraído en 2021.
+  Ver \code{data-raw/README.md} en el repositorio.
 }
 \usage{
 cons_1987
 }
 \description{
-Un \code{tibble} que contiene todo el texto de la constitución
-política de Nicaragua del año 1987.
+Un \code{tibble} con el texto completo de la constitución
+política de Nicaragua de 1987, una fila por línea del texto oficial.
 }
 \keyword{datasets}
